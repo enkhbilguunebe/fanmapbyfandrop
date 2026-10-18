@@ -1,0 +1,2 @@
+import {createFileRoute} from '@tanstack/react-router';import {AuthScreen} from '@/components/AuthScreen';
+export const Route=createFileRoute('/auth')({head:()=>({meta:[{title:'Sign in — FanMap'},{name:'description',content:'Sign in to your FanMap concert passport.'},{property:'og:title',content:'Sign in — FanMap'},{property:'og:description',content:'Your personal concert passport.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),component:AuthScreen});
