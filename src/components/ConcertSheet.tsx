@@ -1,5 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import { X, BadgeCheck, Lock, Heart, Trash2, Ticket, QrCode, Star, Upload, ChevronUp, ChevronDown } from "lucide-react";
+import { X, CircleHelp, BadgeCheck, Lock, Heart, Trash2, Ticket, QrCode, Star, Upload, ChevronUp, ChevronDown } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import { syncCloud } from "@/lib/cloud-sync";
+import { useAccount } from "@/lib/account";
 import { toast } from "sonner";
 import { CONCERTS, artistOf, concertStatus, FRIENDS, OUTCOMES, PREDICTION_QUESTIONS, type Concert } from "@/lib/demo-data";
 import { useApp } from "@/lib/store";
@@ -11,6 +15,7 @@ import { cn } from "@/lib/utils";
 type Tab = "overview" | "reels" | "predict" | "letters" | "guide";
 
 export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: () => void }) {
+  const navigate=useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [expanded, setExpanded] = useState(false);
   const artist = artistOf(concert);
@@ -19,7 +24,7 @@ export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: 
   const stamps = useApp((s) => s.stamps);
   const hasTicket = tickets.includes(concert.id);
   const stamp = stamps.find((s) => s.concertId === concert.id);
-  const verified = hasTicket || !!stamp;
+  const verified = status === "past" ? !!stamp : hasTicket || !!stamp;
   const date = new Date(concert.date);
 
   const tabs: { id: Tab; label: string }[] = [
@@ -69,6 +74,7 @@ export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: 
           {tab === "guide" && verified && <Guide concert={concert} />}
         </div>
       </div>
+      {status!=="past"&&<Button size="icon" aria-label="Open AI concert guide" className="absolute bottom-28 right-5 h-11 w-11 rounded-full shadow-float" onClick={()=>navigate({to:"/guide/$eventId",params:{eventId:concert.id}})}><CircleHelp/></Button>}
     </div>
   );
 }
@@ -97,8 +103,8 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
   const status = concertStatus(concert);
   const friends = FRIENDS.filter((f) => f.concerts.includes(concert.id));
 
-  const run = (fn: (c: string) => string | null, ok: string) => {
-    const err = fn(code);
+  const run = async (fn: (c: string) => Promise<string | null>, ok: string) => {
+    const err = await fn(code);
     if (err) toast.error(err);
     else { toast.success(ok); setCode(""); }
   };
@@ -153,35 +159,38 @@ function Reels({ concert }: { concert: Concert }) {
   const voted = votes[concert.id];
   const r = approved[i];
 
+  const {user}=useAccount();
+  const [preview,setPreview]=useState<string|null>(null);
+  const [file,setFile]=useState<File|null>(null);
+  const [duration,setDuration]=useState(0);
+  const [busy,setBusy]=useState(false);
+  const closed=concertStatus(concert)==="past";
   const onFile = (f?: File) => {
     if (!f) return;
     if (!f.type.startsWith("video/")) { toast.error("Please choose a video file."); return; }
-    const url = URL.createObjectURL(f);
-    const v = document.createElement("video");
-    v.preload = "metadata";
-    v.onloadedmetadata = () => {
-      if (v.duration > 10.5) { toast.error("Reels must be 10 seconds or less."); return; }
-      submit(concert.id, concert.cover, f.name.replace(/\.[^.]+$/, ""));
-      toast.success("Submitted. Your reel is in the moderation queue.");
-    };
-    v.src = url;
+    const url=URL.createObjectURL(f);const v=document.createElement("video");v.preload="metadata";
+    v.onloadedmetadata=()=>{if(!Number.isFinite(v.duration)||v.duration>10){URL.revokeObjectURL(url);toast.error("Reels must be 10 seconds or less.");return;}setFile(f);setDuration(v.duration);setPreview(url);};
+    v.onerror=()=>{URL.revokeObjectURL(url);toast.error("Unable to read this video.")};v.src=url;
   };
+  const upload=async()=>{if(!file||!user)return;setBusy(true);const path=user.id+"/reels/"+crypto.randomUUID()+"."+(file.name.split(".").at(-1)??"mp4");const {error}=await supabase.storage.from("fanmap-media").upload(path,file);if(error){toast.error(error.message);setBusy(false);return;}const {error:e}=await supabase.from("reels").insert({user_id:user.id,event_id:concert.id,path,caption:file.name,duration});if(e)toast.error(e.message);else{toast.success("Submitted for artist moderation.");await syncCloud();if(preview)URL.revokeObjectURL(preview);setPreview(null);setFile(null);}setBusy(false);};
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Submit a 10-second clip. Votes stay hidden until voting closes; winners are approved by the tour team.</p>
       <input ref={fileRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-      <Button variant="secondary" className="w-full" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />Record or upload</Button>
+      <Button variant="secondary" className="w-full" disabled={closed} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />Record or upload</Button>
+      {preview&&<><video controls src={preview} className="w-full rounded-lg"/><Button disabled={busy} onClick={upload}>{busy?"Uploading…":"Submit reel"}</Button></>}
+      {closed&&<p className="text-xs text-muted-foreground">Submission window closed. Historical reels remain available.</p>}
       {mine.length > 0 && <p className="text-xs text-muted-foreground">Your submissions: {mine.map((m) => `${m.caption} (${m.status})`).join(", ")}</p>}
       {r ? (
         <div className="relative overflow-hidden rounded-2xl">
-          <img src={r.poster} alt={r.caption} className="aspect-[4/5] w-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background to-transparent p-4">
+          {r.video?<video controls src={r.video} className="aspect-[4/5] w-full object-contain"/>:<img src={r.poster||concert.cover} alt={r.caption} className="aspect-[4/5] w-full object-cover"/>}
+          <div className="absolute inset-x-0 bottom-0 bg-background/90 p-4">
             <p className="font-medium">{r.caption}</p>
             <p className="text-xs text-muted-foreground">{r.author} · {i + 1}/{approved.length}</p>
             <div className="mt-3 flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => setI((i - 1 + approved.length) % approved.length)}>Prev</Button>
-              <Button size="sm" className="flex-1" disabled={!!voted} onClick={() => { vote(concert.id, r.id); toast.success("Vote recorded."); }}>
+              <Button size="sm" className="flex-1" disabled={!!voted || closed} onClick={() => { vote(concert.id, r.id); toast.success("Vote recorded."); }}>
                 {voted === r.id ? "Your vote" : voted ? "Already voted" : "Vote"}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setI((i + 1) % approved.length)}>Next</Button>
@@ -202,7 +211,7 @@ function Predict({ concert }: { concert: Concert }) {
   const lock = useApp((s) => s.lockPredictions);
   const status = concertStatus(concert);
   const outcome = OUTCOMES[concert.id];
-  const closed = locked || status === "past";
+  const closed = locked || new Date(concert.date)<=new Date();
   const score = outcome ? PREDICTION_QUESTIONS.filter((q) => preds[q.id] === outcome[q.id]).length * 10 : null;
 
   return (
@@ -281,7 +290,8 @@ function Letters({ concert }: { concert: Concert }) {
           <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
             <button onClick={() => toggleLike(l.id)} className={cn("flex items-center gap-1", liked.includes(l.id) && "text-primary")}><Heart className="h-3.5 w-3.5" fill={liked.includes(l.id) ? "currentColor" : "none"} />{l.likes}</button>
             <span>{new Date(l.createdAt).toLocaleDateString()}</span>
-            {l.mine ? <button onClick={() => deleteLetter(l.id)} className="flex items-center gap-1"><Trash2 className="h-3.5 w-3.5" />Delete</button> : <button onClick={() => toast("Reported to moderators.")}>Report</button>}
+            {l.mine&&<Button variant="ghost" size="sm" onClick={async()=>{const text=prompt("Edit your letter",l.text);if(!text)return;const {error}=await supabase.rpc("fanmap_edit_letter",{l:l.id,body:text});if(error)toast.error(error.message);else await syncCloud();}}>Edit</Button>}
+            {l.mine ? <button onClick={() => deleteLetter(l.id)} className="flex items-center gap-1"><Trash2 className="h-3.5 w-3.5" />Delete</button> : <button onClick={async () => {const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {error}=await supabase.from("reports").insert({user_id:user.id,letter_id:l.id,reason:"Fan report"});if(error)toast.error(error.message);else toast.success("Report sent to moderators.");}}>Report</button>}
           </div>
         </article>
       ))}
