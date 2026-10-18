@@ -158,7 +158,17 @@ function Loyalty() {
                       : "text-muted-foreground/40"
                   }
                 />
-              <p className="mt-2 text-xs">{label}</p>
+                {!earned && (
+                  <span className="absolute inset-0 grid place-items-center rounded-full bg-background/55">
+                    <Lock className="h-4 w-4 text-foreground/60" strokeWidth={2.4} />
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-2 text-xs ${attended.length >= Number(n) ? "" : "text-muted-foreground"}`}
+              >
+                {label}
+              </p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 {attended.length >= Number(n) ? "Unlocked" : `${n} concerts`}
               </p>
