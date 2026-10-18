@@ -28,8 +28,8 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
   useEffect(() => {
     if (!el.current) return;
     const m = new maplibregl.Map({ container: el.current, style: STYLES[useApp.getState().mapStyle], center: [-76.5, 42.8], zoom: 4.6, attributionControl: { compact: true } });
-    m.addControl(new maplibregl.NavigationControl({ showZoom: false }), "top-right");
-    m.addControl(new maplibregl.GeolocateControl({ trackUserLocation: false }), "top-right");
+    m.addControl(new maplibregl.NavigationControl({ showZoom: false }), "bottom-right");
+    m.addControl(new maplibregl.GeolocateControl({ trackUserLocation: false }), "bottom-right");
     map.current = m;
     const render = () => drawMarkers();
     m.on("zoomend", render);
