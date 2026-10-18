@@ -753,9 +753,25 @@ export type Database = {
         Returns: undefined
       }
       fanmap_eligible: { Args: { e: string }; Returns: boolean }
+      fanmap_friend_transition: {
+        Args: { act: string; fid: string }
+        Returns: undefined
+      }
       fanmap_friends: { Args: { a: string; b: string }; Returns: boolean }
+      fanmap_location_cleanup: { Args: never; Returns: undefined }
       fanmap_location_transition: {
         Args: { action: string; reverified?: boolean; s: string }
+        Returns: undefined
+      }
+      fanmap_location_write: {
+        Args: {
+          act: string
+          latitude?: number
+          longitude?: number
+          precision_m?: number
+          sid: string
+          uid: string
+        }
         Returns: undefined
       }
       fanmap_moderate: { Args: { r: string; s: string }; Returns: undefined }
