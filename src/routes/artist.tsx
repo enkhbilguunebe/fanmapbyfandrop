@@ -168,7 +168,7 @@ function Artist() {
             <div className="mt-6">
               <p className="text-xs text-gold">Fictional demo tour history and attendance.</p>
               <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-primary ring-4 ring-primary/30" />Upcoming (highlighted)</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-blue-500 ring-4 ring-blue-500/30" />Upcoming (blue)</span>
                 <span className="flex items-center gap-1.5"><span className="fm-dot high" />Past · 3,000+ fans</span>
                 <span className="flex items-center gap-1.5"><span className="fm-dot mid" />Past · 1,500–2,999</span>
                 <span className="flex items-center gap-1.5"><span className="fm-dot low" />Past · under 1,500</span>
