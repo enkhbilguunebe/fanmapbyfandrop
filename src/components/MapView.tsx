@@ -95,5 +95,5 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stamps, tickets]);
 
-  return <div ref={el} className="absolute inset-0" />;
+  return <div className="absolute inset-0"><div ref={el} className="h-full w-full" /></div>;
 }
