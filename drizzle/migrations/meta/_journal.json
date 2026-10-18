@@ -29,6 +29,13 @@
       "when": 1792336118226,
       "tag": "0003_location_expiry_cleanup_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792336440885,
+      "tag": "0004_location_realtime_updates",
+      "breakpoints": true
     }
   ]
 }
