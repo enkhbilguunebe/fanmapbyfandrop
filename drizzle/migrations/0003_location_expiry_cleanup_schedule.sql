@@ -1,0 +1,2 @@
+-- lovable-cron-fallback-reviewed: Coordinates must be physically deleted after expiry even without another user request; one-minute cleanup bounds retention while timestamp-based RLS revokes access immediately.
+CREATE EXTENSION IF NOT EXISTS pg_cron; DO $$ BEGIN PERFORM cron.schedule('fanmap-location-expiry','* * * * *','select public.fanmap_location_cleanup()'); END $$;

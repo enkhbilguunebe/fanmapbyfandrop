@@ -1,4 +1,186 @@
-import {createFileRoute,Link} from '@tanstack/react-router';import {useEffect,useRef,useState} from 'react';import {useChat} from '@ai-sdk/react';import {DefaultChatTransport,type UIMessage} from 'ai';import {supabase} from '@/integrations/supabase/client';import {CONCERTS,artistOf} from '@/lib/demo-data';import {Page} from '@/components/AppShell';import {Button} from '@/components/ui/button';import {Conversation,ConversationContent,ConversationScrollButton} from '@/components/ai-elements/conversation';import {Message,MessageContent,MessageResponse} from '@/components/ai-elements/message';import {PromptInput,PromptInputTextarea,PromptInputFooter,PromptInputSubmit} from '@/components/ai-elements/prompt-input';import {Shimmer} from '@/components/ai-elements/shimmer';import {useAccount} from '@/lib/account';import {Music2} from 'lucide-react';
-export const Route=createFileRoute('/guide/$eventId')({head:()=>({meta:[{title:'Concert guide — FanMap'},{name:'description',content:'A saved AI guide for your selected FanMap concert.'},{property:'og:title',content:'Concert guide — FanMap'},{property:'og:description',content:'Concert-context questions and reliable directions.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),component:Guide});
-function Guide(){const {eventId}=Route.useParams();const {user}=useAccount();const [initial,setInitial]=useState<UIMessage[]|null>(null);const [error,setError]=useState('');useEffect(()=>{setInitial(null);if(!user)return;void supabase.from('guide_threads').select('messages').eq('event_id',eventId).eq('user_id',user.id).maybeSingle().then(({data,error})=>{if(error)setError(error.message);setInitial((data?.messages??[]) as unknown as UIMessage[]);})},[eventId,user?.id]);const concert=CONCERTS.find(c=>c.id===eventId);return <Page title="Concert guide" subtitle={concert?`${artistOf(concert).name} · ${concert.venue}, ${concert.city}`:'Concert unavailable'}><div className="mb-4 flex flex-wrap gap-2">{CONCERTS.filter(c=>new Date(c.date)>=new Date()).map(c=><Button key={c.id} variant="outline" size="sm" asChild><Link to="/guide/$eventId" params={{eventId:c.id}}>{c.city}</Link></Button>)}</div>{error&&<p role="alert">{error}</p>}{concert&&initial!==null?<GuideChat key={eventId} eventId={eventId} initial={initial}/>:<p>Loading conversation…</p>}{concert&&<a target="_blank" rel="noreferrer" className="mt-4 block text-sm text-primary" href={`https://www.google.com/maps/dir/?api=1&destination=${concert.lat},${concert.lng}`}>Open reliable map directions</a>}</Page>}
-function GuideChat({eventId,initial}:{eventId:string;initial:UIMessage[]}){const ref=useRef<HTMLTextAreaElement>(null);const {messages,sendMessage,status,stop,error}=useChat({id:eventId,messages:initial,transport:new DefaultChatTransport({api:'/api/guide',body:{eventId},headers:async()=>{const {data}=await supabase.auth.getSession();return {Authorization:`Bearer ${data.session?.access_token??''}`};}})});const busy=status==='submitted'||status==='streaming';useEffect(()=>{ref.current?.focus()},[status]);return <><Conversation className="h-[45dvh] min-h-64"><ConversationContent>{!messages.length&&<div className="py-6"><Music2 className="mb-4 h-9 w-9 text-primary"/><h2 className="font-semibold">Your concert, in context.</h2><p className="mt-2 text-sm text-muted-foreground">Ask FanMap AI about this show. Live transit, gates and venue policies need verified sources.</p><div className="mt-4 flex flex-wrap gap-2">{['How do I get there?','Which entrance should I use?','How can I find my friends?'].map(text=><Button variant="outline" size="sm" key={text} onClick={()=>sendMessage({text})}>{text}</Button>)}</div></div>}{messages.map(m=><Message key={m.id} from={m.role}><MessageContent className={m.role==='user'?'bg-primary text-primary-foreground':'bg-transparent'}>{m.parts.map((p,i)=>p.type==='text'?<MessageResponse key={i}>{p.text}</MessageResponse>:p.type==='reasoning'?<details key={i} className="mb-3 text-xs text-muted-foreground"><summary>Thinking</summary>{p.text}</details>:null)}</MessageContent></Message>)}{status==='submitted'&&<Shimmer>Thinking…</Shimmer>}</ConversationContent><ConversationScrollButton/></Conversation>{error&&<p role="alert" className="my-3 text-sm text-destructive">{error.message}</p>}<PromptInput onSubmit={({text})=>{if(text.trim()&&!busy){void sendMessage({text});ref.current?.focus();}}}><PromptInputTextarea ref={ref} autoFocus placeholder="Ask about this concert…"/><PromptInputFooter className="justify-end"><PromptInputSubmit status={status} onStop={stop} disabled={!busy&&status==='error'}/></PromptInputFooter></PromptInput></>}
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { supabase } from "@/integrations/supabase/client";
+import { CONCERTS, artistOf } from "@/lib/demo-data";
+import { Page } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputFooter,
+  PromptInputSubmit,
+} from "@/components/ai-elements/prompt-input";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { useAccount } from "@/lib/account";
+import { Music2 } from "lucide-react";
+export const Route = createFileRoute("/guide/$eventId")({
+  head: () => ({
+    meta: [
+      { title: "Concert guide — FanMap" },
+      { name: "description", content: "A saved AI guide for your selected FanMap concert." },
+      { property: "og:title", content: "Concert guide — FanMap" },
+      { property: "og:description", content: "Concert-context questions and reliable directions." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Guide,
+});
+function Guide() {
+  const { eventId } = Route.useParams();
+  const { user } = useAccount();
+  const [initial, setInitial] = useState<UIMessage[] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setInitial(null);
+    if (!user) return;
+    void supabase
+      .from("guide_threads")
+      .select("messages")
+      .eq("event_id", eventId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) setError(error.message);
+        setInitial((data?.messages ?? []) as unknown as UIMessage[]);
+      });
+  }, [eventId, user?.id]);
+  const concert = CONCERTS.find((c) => c.id === eventId);
+  return (
+    <Page
+      title="Concert guide"
+      subtitle={
+        concert
+          ? `${artistOf(concert).name} · ${concert.venue}, ${concert.city}`
+          : "Concert unavailable"
+      }
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        {CONCERTS.filter((c) => new Date(c.date) >= new Date()).map((c) => (
+          <Button key={c.id} variant="outline" size="sm" asChild>
+            <Link to="/guide/$eventId" params={{ eventId: c.id }}>
+              {c.city}
+            </Link>
+          </Button>
+        ))}
+      </div>
+      {error && <p role="alert">{error}</p>}
+      {concert && initial !== null ? (
+        <GuideChat key={eventId} eventId={eventId} initial={initial} />
+      ) : (
+        <p>Loading conversation…</p>
+      )}
+      {concert && (
+        <a
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 block text-sm text-primary"
+          href={`https://www.google.com/maps/dir/?api=1&destination=${concert.lat},${concert.lng}`}
+        >
+          Open reliable map directions
+        </a>
+      )}
+    </Page>
+  );
+}
+function GuideChat({ eventId, initial }: { eventId: string; initial: UIMessage[] }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const { messages, sendMessage, status, stop, error } = useChat({
+    id: eventId,
+    messages: initial,
+    transport: new DefaultChatTransport({
+      api: "/api/guide",
+      body: { eventId },
+      headers: async () => {
+        const { data } = await supabase.auth.getSession();
+        return { Authorization: `Bearer ${data.session?.access_token ?? ""}` };
+      },
+    }),
+  });
+  const busy = status === "submitted" || status === "streaming";
+  useEffect(() => {
+    ref.current?.focus();
+  }, [status]);
+  return (
+    <>
+      <Conversation className="h-[45dvh] min-h-64">
+        <ConversationContent>
+          {!messages.length && (
+            <div className="py-6">
+              <Music2 className="mb-4 h-9 w-9 text-primary" />
+              <h2 className="font-semibold">Your concert, in context.</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Ask FanMap AI about this show. Live transit, gates and venue policies need verified
+                sources.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  "How do I get there?",
+                  "Which entrance should I use?",
+                  "How can I find my friends?",
+                ].map((text) => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    key={text}
+                    onClick={() => sendMessage({ text })}
+                  >
+                    {text}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {messages.map((m) => (
+            <Message key={m.id} from={m.role}>
+              <MessageContent
+                className={
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-transparent"
+                }
+              >
+                {m.parts.map((p, i) =>
+                  p.type === "text" ? (
+                    <MessageResponse key={i}>{p.text}</MessageResponse>
+                  ) : p.type === "reasoning" ? (
+                    <details key={i} className="mb-3 text-xs text-muted-foreground">
+                      <summary>Thinking</summary>
+                      {p.text}
+                    </details>
+                  ) : null,
+                )}
+              </MessageContent>
+            </Message>
+          ))}
+          {status === "submitted" && <Shimmer>Thinking…</Shimmer>}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+      {error && (
+        <p role="alert" className="my-3 text-sm text-destructive">
+          {error.message}
+        </p>
+      )}
+      <PromptInput
+        onSubmit={({ text }) => {
+          if (text.trim() && !busy) {
+            void sendMessage({ text });
+            ref.current?.focus();
+          }
+        }}
+      >
+        <PromptInputTextarea ref={ref} autoFocus placeholder="Ask about this concert…" />
+        <PromptInputFooter className="justify-end">
+          <PromptInputSubmit status={status} onStop={stop} disabled={!busy && status === "error"} />
+        </PromptInputFooter>
+      </PromptInput>
+    </>
+  );
+}

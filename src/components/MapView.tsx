@@ -4,6 +4,8 @@ import type { StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CONCERTS, concertStatus, type Concert } from "@/lib/demo-data";
 import { useApp, type MapStyle } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccount } from "@/lib/account";
 
 const raster = (tiles: string[], attribution: string): StyleSpecification => ({
   version: 8,
@@ -24,6 +26,8 @@ function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: 
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
+  const friendMarkers = useRef<maplibregl.Marker[]>([]);
+  const { user } = useAccount();
   const style = useApp((s) => s.mapStyle);
   const stamps = useApp((s) => s.stamps);
   const tickets = useApp((s) => s.tickets);
@@ -105,6 +109,45 @@ function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: 
     return()=>{m.off("load",drawMarkers);};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stamps, tickets]);
+
+  useEffect(() => {
+    let disposed = false;
+    let generation = 0;
+    let expiry: ReturnType<typeof setTimeout> | undefined;
+    const clear = () => { friendMarkers.current.forEach((m) => m.remove()); friendMarkers.current = []; };
+    const refresh = async () => {
+      const m = map.current;
+      if (!m) return;
+      const current = ++generation;
+      const { data } = await supabase.from("location_positions").select("*");
+      const { data: sessions } = await supabase.from("location_sessions").select("id,expires_at").eq("status", "active");
+      if (disposed || current !== generation) return;
+      clear();
+      for (const p of data ?? []) {
+        const session = sessions?.find((s) => s.id === p.session_id);
+        if (!session?.expires_at || Date.parse(session.expires_at) <= Date.now()) continue;
+        const element = document.createElement("div");
+        element.className = "fm-friend-marker";
+        element.textContent = p.user_id === user?.id ? "Y" : "F";
+        if (Date.now() - Date.parse(p.updated_at) > 30000) element.classList.add("stale");
+        element.setAttribute("aria-label", "Shared friend location");
+        const popup = new maplibregl.Popup({ offset: 14 }).setText(`${Date.now() - Date.parse(p.updated_at) > 30000 ? "Stale" : "Shared location"} · accuracy ${Math.round(p.accuracy)} m`);
+        friendMarkers.current.push(new maplibregl.Marker({ element }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(m));
+      }
+      if (expiry) clearTimeout(expiry);
+      const deadlines = (sessions ?? []).flatMap((s) => s.expires_at ? [Date.parse(s.expires_at) - Date.now()] : []).filter((n) => n > 0);
+      if (deadlines.length) expiry = setTimeout(() => { clear(); void refresh(); }, Math.min(...deadlines));
+    };
+    void refresh();
+    const onRefresh = () => { void refresh(); };
+    window.addEventListener("fanmap-location-refresh", onRefresh);
+    const channel = supabase.channel("map-friend-locations")
+      .on("postgres_changes", { event: "*", schema: "public", table: "location_positions" }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "location_sessions" }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => void refresh())
+      .subscribe();
+    return () => { disposed = true; window.removeEventListener("fanmap-location-refresh", onRefresh); if (expiry) clearTimeout(expiry); clear(); void supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   return <div className="absolute inset-0"><div ref={el} className="h-full w-full" /></div>;
 }

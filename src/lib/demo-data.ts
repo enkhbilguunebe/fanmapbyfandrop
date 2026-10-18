@@ -76,7 +76,7 @@ export const LEVELS = [
   { name: "Tour Legend", min: 12 },
 ];
 
-export type Letter = { id: string; concertId: string; author: string; text: string; likes: number; createdAt: string; featured?: boolean; artistReply?: string; mine?: boolean; showCount?: boolean };
+export type Letter = { id: string; concertId: string; author: string; text: string; likes: number; createdAt: string; featured?: boolean; artistReply?: string | undefined; mine?: boolean; showCount?: boolean };
 export const SEED_LETTERS: Letter[] = [
   { id: "l1", concertId: "c-montreal", author: "Camille R.", text: "Paper Moons got me through my first winter away from home. Hearing it live in Montreal felt like closing a chapter.", likes: 214, createdAt: d(-39), featured: true, artistReply: "Camille, this means the world. Thank you for being there. — Nova" },
   { id: "l2", concertId: "c-montreal", author: "Dev P.", text: "Third show this year. The acoustic bridge in Northbound was unreal.", likes: 88, createdAt: d(-38) },

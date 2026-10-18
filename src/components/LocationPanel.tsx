@@ -1,2 +1,311 @@
-import {useEffect,useRef,useState} from 'react';import {useServerFn} from '@tanstack/react-start';import {locationAction} from '@/lib/location.functions';import {friendAction} from '@/lib/fanmap.functions';import {useAccount} from '@/lib/account';import {supabase} from '@/integrations/supabase/client';import {Dialog,DialogContent,DialogTitle,DialogDescription} from './ui/dialog';import {Button} from './ui/button';import {Input} from './ui/input';import {toast} from 'sonner';
-export function LocationPanel({open,onClose,friendId}:{open:boolean;onClose:()=>void;friendId?:string}){const action=useServerFn(locationAction);const friendsAction=useServerFn(friendAction);const {user,account}=useAccount();const [friends,setFriends]=useState<{id:string;name:string}[]>([]);const [friend,setFriend]=useState(friendId??'');const [password,setPassword]=useState('');const [sessions,setSessions]=useState<any[]>([]);const [positions,setPositions]=useState<any[]>([]);const [error,setError]=useState('');const watch=useRef<number|null>(null);const [sharing,setSharing]=useState<string|null>(null);async function refresh(){try{const r=await action({data:{action:'list'}});if('sessions'in r){setSessions(r.sessions??[]);setPositions(r.positions??[]);}}catch(e){setError(e instanceof Error?e.message:'Unable to load sharing')}}useEffect(()=>{if(!open)return;void friendsAction({data:{action:'list'}}).then(r=>{if('friends'in r)setFriends((r.friends??[]).filter(f=>f.status==='accepted').map(f=>({id:f.sender_id===user?.id?f.receiver_id:f.sender_id,name:f.person?.display_name??'Friend'})))}).catch(()=>{});void refresh();const timer=setInterval(()=>void refresh(),5000);return()=>clearInterval(timer)},[open]);useEffect(()=>{if(!sharing)return;const s=sessions.find(s=>s.id===sharing);if(!s||s.status!=='active'||Date.parse(s.expires_at)<=Date.now()){if(watch.current!==null)navigator.geolocation.clearWatch(watch.current);setSharing(null);toast('Location sharing ended');}},[sharing,sessions]);useEffect(()=>{return()=>{if(watch.current!==null)navigator.geolocation.clearWatch(watch.current)}},[]);async function startTracking(id:string){if(watch.current!==null)navigator.geolocation.clearWatch(watch.current);watch.current=navigator.geolocation.watchPosition(pos=>{if(document.visibilityState!=='visible')return;void action({data:{action:'position',session:id,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy}}).catch(()=>{if(watch.current!==null)navigator.geolocation.clearWatch(watch.current);setSharing(null);});},()=>{setError('Location permission denied. Sharing has not started.');void supabase.rpc('fanmap_location_transition',{s:id,action:'stop'});setSharing(null);},{enableHighAccuracy:false,maximumAge:10000});setSharing(id);}return <Dialog open={open} onOpenChange={o=>!o&&onClose()}><DialogContent className="max-h-[90dvh] overflow-y-auto"><DialogTitle>Find friends</DialogTitle><DialogDescription>Share only with an accepted friend, for up to 30 minutes. No automatic reciprocal sharing.</DialogDescription><p className="text-xs text-muted-foreground">Live updates require FanMap to remain active. Location sharing is off by default.</p>{account?.profile.is_demo&&<p className="text-xs text-gold">Demo accounts have private random passwords. Use your own verified account to test secure location reauthentication.</p>}<label className="text-sm">Friend<select aria-label="Location friend" value={friend} onChange={e=>setFriend(e.target.value)} className="mt-2 w-full rounded-md border border-border bg-secondary p-2"><option value="">Select accepted friend</option>{friends.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><Input type="password" aria-label="Reverify password" placeholder="Account password to reverify" value={password} onChange={e=>setPassword(e.target.value)}/><Button disabled={!friend||!password} onClick={async()=>{try{await new Promise<GeolocationPosition>((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject));await action({data:{action:'request',friend,password}});setPassword('');toast.success('Request sent. Tracking starts only after acceptance.');await refresh()}catch(e){setError(e instanceof Error?e.message:'Location permission denied')}}}>Share My Location</Button>{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}{sessions.map(s=>{const expired=s.expires_at&&Date.parse(s.expires_at)<=Date.now();const live=s.status==='active'&&!expired;return <section key={s.id} className="border-t border-border pt-3"><p className="text-sm font-medium">{s.sender_id===user?.id?'Your sharing request':'Friend location request'} · {expired?'Expired':s.status}</p>{live&&<p className="text-xs text-primary">Ends {new Date(s.expires_at).toLocaleTimeString()} · {Math.max(0,Math.ceil((Date.parse(s.expires_at)-Date.now())/60000))} min left</p>}<div className="mt-2 flex flex-wrap gap-2">{s.status==='pending'&&s.receiver_id===user?.id&&<><Button onClick={async()=>{const {error}=await supabase.rpc('fanmap_location_transition',{s:s.id,action:'accept'});if(error)toast.error(error.message);await refresh()}}>Accept viewing only</Button><Button variant="secondary" onClick={async()=>{await supabase.rpc('fanmap_location_transition',{s:s.id,action:'decline'});await refresh()}}>Decline</Button></>}{live&&<><Button variant="secondary" onClick={async()=>{try{if(s.receiver_id===user?.id&&!s.receiver_consent){await action({data:{action:'reciprocal',session:s.id,password}});setPassword('')}await startTracking(s.id);}catch(e){toast.error(e instanceof Error?e.message:'Unable to share')}}}>{s.sender_id===user?.id?'Start foreground sharing':'Consent and share my location'}</Button><Button variant="destructive" onClick={async()=>{await supabase.rpc('fanmap_location_transition',{s:s.id,action:'stop'});if(watch.current!==null)navigator.geolocation.clearWatch(watch.current);setSharing(null);await refresh()}}>Stop Sharing Now</Button><Button variant="outline" onClick={()=>navigator.geolocation.getCurrentPosition(async p=>{await action({data:{action:'meet',session:s.id,lat:p.coords.latitude,lng:p.coords.longitude}});await refresh()},()=>toast.error('Location permission required'))}>Meet Here</Button>{s.meeting_lat!==null&&(s.meeting_accepted?<a target="_blank" rel="noreferrer" className="text-sm text-primary" href={`https://www.google.com/maps/dir/?api=1&destination=${s.meeting_lat},${s.meeting_lng}`}>Directions to agreed point</a>:s.meeting_proposer!==user?.id?<Button onClick={async()=>{await action({data:{action:'acceptMeeting',session:s.id}});await refresh()}}>Accept meeting point</Button>:<p className="text-xs text-muted-foreground">Meeting point awaiting acceptance</p>)}</>}</div>{live&&positions.filter(p=>p.session_id===s.id).map(p=><p key={p.user_id} className="mt-2 text-xs text-muted-foreground">{p.user_id===user?.id?'You':'Friend'} · accuracy {Math.round(p.accuracy)} m · {Date.now()-Date.parse(p.updated_at)>30000?'Stale':'Updated'} {new Date(p.updated_at).toLocaleTimeString()}</p>)}</section>})}</DialogContent></Dialog>}
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { locationAction } from "@/lib/location.functions";
+import { friendAction } from "@/lib/fanmap.functions";
+import { useAccount } from "@/lib/account";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { toast } from "sonner";
+import { sharingActive } from "@/lib/eligibility";
+export function LocationPanel({
+  open,
+  onClose,
+  friendId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  friendId?: string;
+}) {
+  const action = useServerFn(locationAction);
+  const friendsAction = useServerFn(friendAction);
+  const { user, account } = useAccount();
+  const [friends, setFriends] = useState<{ id: string; name: string }[]>([]);
+  const [friend, setFriend] = useState(friendId ?? "");
+  const [password, setPassword] = useState("");
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+  const [error, setError] = useState("");
+  const watch = useRef<number | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
+  async function refresh() {
+    try {
+      const r = await action({ data: { action: "list" } });
+      if ("sessions" in r) {
+        setSessions(r.sessions ?? []);
+        setPositions(r.positions ?? []);
+        window.dispatchEvent(new Event("fanmap-location-refresh"));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load sharing");
+    }
+  }
+  useEffect(() => {
+    if (!open) return;
+    void friendsAction({ data: { action: "list" } })
+      .then((r) => {
+        if ("friends" in r)
+          setFriends(
+            (r.friends ?? [])
+              .filter((f) => f.status === "accepted")
+              .map((f) => ({
+                id: f.sender_id === user?.id ? f.receiver_id : f.sender_id,
+                name: f.person?.display_name ?? "Friend",
+              })),
+          );
+      })
+      .catch(() => {});
+    void refresh();
+    const timer = setInterval(() => void refresh(), 5000);
+    return () => clearInterval(timer);
+  }, [open]);
+  useEffect(() => {
+    if (!sharing) return;
+    const s = sessions.find((s) => s.id === sharing);
+    if (!s || !sharingActive(s.status, s.expires_at)) {
+      if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+      setSharing(null);
+      toast("Location sharing ended");
+    }
+  }, [sharing, sessions]);
+  useEffect(() => {
+    return () => {
+      if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+    };
+  }, []);
+  async function startTracking(id: string) {
+    if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+    watch.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (document.visibilityState !== "visible") return;
+        void action({
+          data: {
+            action: "position",
+            session: id,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          },
+        }).catch(() => {
+          if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+          setSharing(null);
+        });
+      },
+      () => {
+        setError("Location permission denied. Sharing has not started.");
+        void supabase.rpc("fanmap_location_transition", { s: id, action: "stop" });
+        setSharing(null);
+      },
+      { enableHighAccuracy: false, maximumAge: 10000 },
+    );
+    setSharing(id);
+  }
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogTitle>Find friends</DialogTitle>
+        <DialogDescription>
+          Share only with an accepted friend, for up to 30 minutes. No automatic reciprocal sharing.
+        </DialogDescription>
+        <p className="text-xs text-muted-foreground">
+          Live updates require FanMap to remain active. Location sharing is off by default.
+        </p>
+        {account?.profile.is_demo && (
+          <p className="text-xs text-gold">
+            Demo accounts have private random passwords. Use your own verified account to test
+            secure location reauthentication.
+          </p>
+        )}
+        <label className="text-sm">
+          Friend
+          <select
+            aria-label="Location friend"
+            value={friend}
+            onChange={(e) => setFriend(e.target.value)}
+            className="mt-2 w-full rounded-md border border-border bg-secondary p-2"
+          >
+            <option value="">Select accepted friend</option>
+            {friends.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Input
+          type="password"
+          aria-label="Reverify password"
+          placeholder="Account password to reverify"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button
+          disabled={!friend || !password}
+          onClick={async () => {
+            try {
+              await new Promise<GeolocationPosition>((resolve, reject) =>
+                navigator.geolocation.getCurrentPosition(resolve, reject),
+              );
+              await action({ data: { action: "request", friend, password } });
+              setPassword("");
+              toast.success("Request sent. Tracking starts only after acceptance.");
+              await refresh();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Location permission denied");
+            }
+          }}
+        >
+          Share My Location
+        </Button>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {sessions.map((s) => {
+          const expired = s.expires_at && Date.parse(s.expires_at) <= Date.now();
+          const live = sharingActive(s.status, s.expires_at);
+          return (
+            <section key={s.id} className="border-t border-border pt-3">
+              <p className="text-sm font-medium">
+                {s.sender_id === user?.id ? "Your sharing request" : "Friend location request"} ·{" "}
+                {expired ? "Expired" : s.status}
+              </p>
+              {live && (
+                <p className="text-xs text-primary">
+                  Ends {new Date(s.expires_at).toLocaleTimeString()} ·{" "}
+                  {Math.max(0, Math.ceil((Date.parse(s.expires_at) - Date.now()) / 60000))} min left
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {s.status === "pending" && s.receiver_id === user?.id && (
+                  <>
+                    <Button
+                      onClick={async () => {
+                        const { error } = await supabase.rpc("fanmap_location_transition", {
+                          s: s.id,
+                          action: "accept",
+                        });
+                        if (error) toast.error(error.message);
+                        await refresh();
+                      }}
+                    >
+                      Accept viewing only
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        await supabase.rpc("fanmap_location_transition", {
+                          s: s.id,
+                          action: "decline",
+                        });
+                        await refresh();
+                      }}
+                    >
+                      Decline
+                    </Button>
+                  </>
+                )}
+                {live && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          if (s.receiver_id === user?.id && !s.receiver_consent) {
+                            await action({
+                              data: { action: "reciprocal", session: s.id, password },
+                            });
+                            setPassword("");
+                          }
+                          await startTracking(s.id);
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : "Unable to share");
+                        }
+                      }}
+                    >
+                      {s.sender_id === user?.id
+                        ? "Start foreground sharing"
+                        : "Consent and share my location"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={async () => {
+                        await supabase.rpc("fanmap_location_transition", {
+                          s: s.id,
+                          action: "stop",
+                        });
+                        if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
+                        setSharing(null);
+                        await refresh();
+                      }}
+                    >
+                      Stop Sharing Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        navigator.geolocation.getCurrentPosition(
+                          async (p) => {
+                            await action({
+                              data: {
+                                action: "meet",
+                                session: s.id,
+                                lat: p.coords.latitude,
+                                lng: p.coords.longitude,
+                              },
+                            });
+                            await refresh();
+                          },
+                          () => toast.error("Location permission required"),
+                        )
+                      }
+                    >
+                      Meet Here
+                    </Button>
+                    {s.meeting_lat !== null &&
+                      (s.meeting_accepted ? (
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-primary"
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${s.meeting_lat},${s.meeting_lng}`}
+                        >
+                          Directions to agreed point
+                        </a>
+                      ) : s.meeting_proposer !== user?.id ? (
+                        <Button
+                          onClick={async () => {
+                            await action({ data: { action: "acceptMeeting", session: s.id } });
+                            await refresh();
+                          }}
+                        >
+                          Accept meeting point
+                        </Button>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Meeting point awaiting acceptance
+                        </p>
+                      ))}
+                  </>
+                )}
+              </div>
+              {live &&
+                positions
+                  .filter((p) => p.session_id === s.id)
+                  .map((p) => (
+                    <p key={p.user_id} className="mt-2 text-xs text-muted-foreground">
+                      {p.user_id === user?.id ? "You" : "Friend"} · accuracy{" "}
+                      {Math.round(p.accuracy)} m ·{" "}
+                      {Date.now() - Date.parse(p.updated_at) > 30000 ? "Stale" : "Updated"}{" "}
+                      {new Date(p.updated_at).toLocaleTimeString()}
+                    </p>
+                  ))}
+            </section>
+          );
+        })}
+      </DialogContent>
+    </Dialog>
+  );
+}

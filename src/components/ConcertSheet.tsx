@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { canParticipate, validReelDuration } from "@/lib/eligibility";
 
 type Tab = "overview" | "reels" | "predict" | "letters" | "guide";
 
@@ -24,7 +25,7 @@ export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: 
   const stamps = useApp((s) => s.stamps);
   const hasTicket = tickets.includes(concert.id);
   const stamp = stamps.find((s) => s.concertId === concert.id);
-  const verified = status === "past" ? !!stamp : hasTicket || !!stamp;
+  const verified = canParticipate(status === "past", hasTicket, !!stamp);
   const date = new Date(concert.date);
 
   const tabs: { id: Tab; label: string }[] = [
@@ -139,7 +140,7 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
       )}
       {friends.length > 0 && (
         <div>
-          <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Friends here</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Fictional demo fans here</p>
           <div className="flex gap-2">{friends.map((f) => <span key={f.id} className="rounded-full bg-card px-3 py-1 text-xs">{f.name}</span>)}</div>
         </div>
       )}
@@ -148,7 +149,8 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
 }
 
 function Reels({ concert }: { concert: Concert }) {
-  const reels = useApp((s) => s.reels.filter((r) => r.concertId === concert.id));
+  const allReels = useApp((s) => s.reels);
+  const reels = useMemo(() => allReels.filter((r) => r.concertId === concert.id), [allReels, concert.id]);
   const votes = useApp((s) => s.votes);
   const vote = useApp((s) => s.vote);
   const submit = useApp((s) => s.submitReel);
@@ -169,7 +171,7 @@ function Reels({ concert }: { concert: Concert }) {
     if (!f) return;
     if (!f.type.startsWith("video/")) { toast.error("Please choose a video file."); return; }
     const url=URL.createObjectURL(f);const v=document.createElement("video");v.preload="metadata";
-    v.onloadedmetadata=()=>{if(!Number.isFinite(v.duration)||v.duration>10){URL.revokeObjectURL(url);toast.error("Reels must be 10 seconds or less.");return;}setFile(f);setDuration(v.duration);setPreview(url);};
+    v.onloadedmetadata=()=>{if(!validReelDuration(v.duration)){URL.revokeObjectURL(url);toast.error("Reels must be 10 seconds or less.");return;}setFile(f);setDuration(v.duration);setPreview(url);};
     v.onerror=()=>{URL.revokeObjectURL(url);toast.error("Unable to read this video.")};v.src=url;
   };
   const upload=async()=>{if(!file||!user)return;setBusy(true);const path=user.id+"/reels/"+crypto.randomUUID()+"."+(file.name.split(".").at(-1)??"mp4");const {error}=await supabase.storage.from("fanmap-media").upload(path,file);if(error){toast.error(error.message);setBusy(false);return;}const {error:e}=await supabase.from("reels").insert({user_id:user.id,event_id:concert.id,path,caption:file.name,duration});if(e)toast.error(e.message);else{toast.success("Submitted for artist moderation.");await syncCloud();if(preview)URL.revokeObjectURL(preview);setPreview(null);setFile(null);}setBusy(false);};
@@ -205,7 +207,8 @@ function Reels({ concert }: { concert: Concert }) {
 }
 
 function Predict({ concert }: { concert: Concert }) {
-  const preds = useApp((s) => s.predictions[concert.id] ?? {});
+  const predictions = useApp((s) => s.predictions);
+  const preds = predictions[concert.id] ?? {};
   const locked = useApp((s) => !!s.locked[concert.id]);
   const set = useApp((s) => s.setPrediction);
   const lock = useApp((s) => s.lockPredictions);
@@ -303,9 +306,9 @@ const concertArtist = (id: string) => CONCERTS.find((c) => c.id === id)?.artistI
 
 function Guide({ concert }: { concert: Concert }) {
   const tips = [
-    ["Doors", "Doors open 1 hour before showtime. Arrive early for floor sections."],
-    ["Getting there", `Transit is the fastest route to ${concert.venue}. Rideshare pickup is usually one block away.`],
-    ["Bag policy", "Small clear bags only. Check the venue's official site for current rules."],
+    ["Doors", "Door times and entrances are not verified. Check your ticket and the official venue information."],
+    ["Getting there", `Check current directions to ${concert.venue}; live transit and pickup locations are not available here.`],
+    ["Bag policy", "Check the venue's official site for its current bag policy. No verified policy is available in this demo."],
   ];
   return (
     <div className="space-y-3">

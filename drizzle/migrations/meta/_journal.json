@@ -15,6 +15,27 @@
       "when": 1792335139790,
       "tag": "0001_fanmap_friends_guide_location",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792335755769,
+      "tag": "0002_location_privacy_atomic_transitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792336118226,
+      "tag": "0003_location_expiry_cleanup_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792336440885,
+      "tag": "0004_location_realtime_updates",
+      "breakpoints": true
     }
   ]
 }
