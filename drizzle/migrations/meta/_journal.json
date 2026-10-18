@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792335081026,
+      "tag": "0000_fanmap_accounts_concerts",
+      "breakpoints": true
+    }
+  ]
 }
