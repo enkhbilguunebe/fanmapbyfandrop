@@ -137,6 +137,9 @@
 .fm-marker.today{background:var(--primary)}
 .fm-marker.today::after{content:"";position:absolute;inset:-2px;border-radius:999px;background:var(--primary);animation:fm-pulse 1.6s ease-out infinite}
 .fm-cluster{background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:999px;min-width:32px;height:32px;display:grid;place-items:center;font-size:12px;font-weight:600;cursor:pointer}
+.fm-friend-marker{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--success);color:var(--primary-foreground);border:2px solid var(--background);font-size:13px;font-weight:700;cursor:pointer}
+.maplibregl-popup-content{background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:8px}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip{border-top-color:var(--card)}
 .maplibregl-ctrl-bottom-right{bottom:96px!important}
 .maplibregl-ctrl-attrib{background:transparent!important;font-size:9px}
 .maplibregl-ctrl-attrib a{color:var(--muted-foreground)!important}
