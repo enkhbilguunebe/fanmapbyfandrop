@@ -11,10 +11,10 @@ const raster = (tiles: string[], attribution: string): StyleSpecification => ({
   layers: [{ id: "base", type: "raster", source: "base" }],
 });
 
-const STYLES: Record<MapStyle, StyleSpecification> = {
-  default: raster(["https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png"], "© OpenStreetMap © CARTO"),
+const STYLES: Record<MapStyle, StyleSpecification | string> = {
+  default: "https://tiles.openfreemap.org/styles/liberty",
   satellite: raster(["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "© Esri"),
-  fanmap: raster(["https://a.basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}@2x.png", ], "© OpenStreetMap © CARTO"),
+  fanmap: "https://tiles.openfreemap.org/styles/dark",
 };
 
 export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: [number, number] | null }) {
