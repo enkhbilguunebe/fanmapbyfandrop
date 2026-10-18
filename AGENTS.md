@@ -10,5 +10,8 @@
 <!-- LOVABLE:END -->
 
 - Map uses maplibre-gl v4 (v6 worker breaks under Vite prebundling) with OpenFreeMap/Esri keyless styles; MapView is lazy + ClientOnly because it touches window.
-- Demo state lives in a persisted zustand store (src/lib/store.ts, skipHydration + rehydrate in __root) until Lovable Cloud is enabled; demo data in src/lib/demo-data.ts is fictional.
+- Persist only presentation state in Zustand; hydrate personal/shared data from authenticated Cloud reads and discard stale account generations to prevent cross-account leakage.
 - Lovable Cloud is connected; migrate personal and shared features to authenticated Cloud data, never treat the legacy demo store as an authorization boundary, because browser state is user-editable.
+- Use separate non-persisting auth clients for demo session minting, never authenticate the shared privileged client, to preserve its authorization identity.
+- Friend transitions and location writes use locked SQL functions; session expiry is enforced in read policies and physical coordinate cleanup runs each minute to prevent races and retention.
+- Store AI guide conversations per account and concert, use a server-validated streaming endpoint and retain the model's verified-information limitations.

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { canParticipate, validReelDuration } from "@/lib/eligibility";
 
 type Tab = "overview" | "reels" | "predict" | "letters" | "guide";
 
@@ -24,7 +25,7 @@ export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: 
   const stamps = useApp((s) => s.stamps);
   const hasTicket = tickets.includes(concert.id);
   const stamp = stamps.find((s) => s.concertId === concert.id);
-  const verified = status === "past" ? !!stamp : hasTicket || !!stamp;
+  const verified = canParticipate(status === "past", hasTicket, !!stamp);
   const date = new Date(concert.date);
 
   const tabs: { id: Tab; label: string }[] = [
@@ -169,7 +170,7 @@ function Reels({ concert }: { concert: Concert }) {
     if (!f) return;
     if (!f.type.startsWith("video/")) { toast.error("Please choose a video file."); return; }
     const url=URL.createObjectURL(f);const v=document.createElement("video");v.preload="metadata";
-    v.onloadedmetadata=()=>{if(!Number.isFinite(v.duration)||v.duration>10){URL.revokeObjectURL(url);toast.error("Reels must be 10 seconds or less.");return;}setFile(f);setDuration(v.duration);setPreview(url);};
+    v.onloadedmetadata=()=>{if(!validReelDuration(v.duration)){URL.revokeObjectURL(url);toast.error("Reels must be 10 seconds or less.");return;}setFile(f);setDuration(v.duration);setPreview(url);};
     v.onerror=()=>{URL.revokeObjectURL(url);toast.error("Unable to read this video.")};v.src=url;
   };
   const upload=async()=>{if(!file||!user)return;setBusy(true);const path=user.id+"/reels/"+crypto.randomUUID()+"."+(file.name.split(".").at(-1)??"mp4");const {error}=await supabase.storage.from("fanmap-media").upload(path,file);if(error){toast.error(error.message);setBusy(false);return;}const {error:e}=await supabase.from("reels").insert({user_id:user.id,event_id:concert.id,path,caption:file.name,duration});if(e)toast.error(e.message);else{toast.success("Submitted for artist moderation.");await syncCloud();if(preview)URL.revokeObjectURL(preview);setPreview(null);setFile(null);}setBusy(false);};

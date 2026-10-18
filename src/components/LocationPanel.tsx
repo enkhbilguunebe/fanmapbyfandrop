@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dial
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { toast } from "sonner";
+import { sharingActive } from "@/lib/eligibility";
 export function LocationPanel({
   open,
   onClose,
@@ -61,7 +62,7 @@ export function LocationPanel({
   useEffect(() => {
     if (!sharing) return;
     const s = sessions.find((s) => s.id === sharing);
-    if (!s || s.status !== "active" || Date.parse(s.expires_at) <= Date.now()) {
+    if (!s || !sharingActive(s.status, s.expires_at)) {
       if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
       setSharing(null);
       toast("Location sharing ended");
@@ -163,7 +164,7 @@ export function LocationPanel({
         )}
         {sessions.map((s) => {
           const expired = s.expires_at && Date.parse(s.expires_at) <= Date.now();
-          const live = s.status === "active" && !expired;
+          const live = sharingActive(s.status, s.expires_at);
           return (
             <section key={s.id} className="border-t border-border pt-3">
               <p className="text-sm font-medium">
