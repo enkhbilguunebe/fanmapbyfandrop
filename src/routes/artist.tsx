@@ -103,7 +103,7 @@ function Artist() {
             ← Back to fan app
           </Link>
         </aside>
-        <main className="flex-1 p-6 md:p-10">
+        <main className="min-w-0 flex-1 p-6 md:p-10">
           <div className="mb-6 flex gap-2 overflow-x-auto md:hidden">
             {SECTIONS.map((s) => (
               <button
@@ -143,9 +143,9 @@ function Artist() {
                   ["Opted in", String(audience.filter((f) => f.optIn).length), ""],
                   ["Letters", String(novaLetters.length), ""],
                 ]).map(([l, v, sub]) => (
-                  <div key={l} className="rounded-2xl border border-border bg-card p-5">
+                  <div key={l} className="min-w-0 rounded-2xl border border-border bg-card p-4 md:p-5">
                     <p className="text-xs text-muted-foreground">{l}</p>
-                    <p className="mt-2 text-3xl font-semibold">{v}</p>
+                    <p className="mt-2 break-words text-2xl font-semibold md:text-3xl">{v}</p>
                     {sub && <p className="mt-1 text-xs text-primary">{sub}</p>}
                   </div>
                 ))}
@@ -153,9 +153,9 @@ function Artist() {
               <h2 className="mt-10 text-sm font-medium text-muted-foreground">Events</h2>
               <div className="mt-3 divide-y divide-border rounded-2xl border border-border bg-card">
                 {(isDemo ? [...TOUR_STOPS].reverse() : novaConcerts.map((c) => ({ id: c.id, city: c.city, venue: c.venue, date: c.date, attended: 0, status: concertStatus(c) }))).map((s) => (
-                  <div key={s.id} className="flex justify-between gap-3 px-5 py-3 text-sm">
-                    <span>{s.venue}, {s.city}</span>
-                    <span className="shrink-0 text-muted-foreground">
+                  <div key={s.id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm md:px-5">
+                    <span className="min-w-0">{s.venue}, {s.city}</span>
+                    <span className="shrink-0 text-right text-muted-foreground">
                       {new Date(s.date).toLocaleDateString()} · {s.status === "past" && s.attended ? s.attended.toLocaleString() + " fans" : s.status}
                     </span>
                   </div>
@@ -200,7 +200,7 @@ function Artist() {
           )}
 
           {sec === "Fans" && (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground">
                   <tr>
