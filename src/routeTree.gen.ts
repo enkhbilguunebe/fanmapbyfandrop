@@ -16,6 +16,8 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
 import { Route as PhotosRouteImport } from './routes/photos'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ApiGuideRouteImport } from './routes/api.guide'
+import { Route as GuideEventIdRouteImport } from './routes/guide.$eventId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +54,16 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGuideRoute = ApiGuideRouteImport.update({
+  id: '/api/guide',
+  path: '/api/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideEventIdRoute = GuideEventIdRouteImport.update({
+  id: '/guide/$eventId',
+  path: '/guide/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +73,8 @@ export interface FileRoutesByFullPath {
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/api/guide': typeof ApiGuideRoute
+  '/guide/$eventId': typeof GuideEventIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +84,8 @@ export interface FileRoutesByTo {
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/api/guide': typeof ApiGuideRoute
+  '/guide/$eventId': typeof GuideEventIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +96,8 @@ export interface FileRoutesById {
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/api/guide': typeof ApiGuideRoute
+  '/guide/$eventId': typeof GuideEventIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +109,8 @@ export interface FileRouteTypes {
     | '/loyalty'
     | '/photos'
     | '/reset-password'
+    | '/api/guide'
+    | '/guide/$eventId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +120,8 @@ export interface FileRouteTypes {
     | '/loyalty'
     | '/photos'
     | '/reset-password'
+    | '/api/guide'
+    | '/guide/$eventId'
   id:
     | '__root__'
     | '/'
@@ -109,6 +131,8 @@ export interface FileRouteTypes {
     | '/loyalty'
     | '/photos'
     | '/reset-password'
+    | '/api/guide'
+    | '/guide/$eventId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +143,8 @@ export interface RootRouteChildren {
   LoyaltyRoute: typeof LoyaltyRoute
   PhotosRoute: typeof PhotosRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiGuideRoute: typeof ApiGuideRoute
+  GuideEventIdRoute: typeof GuideEventIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +198,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/guide': {
+      id: '/api/guide'
+      path: '/api/guide'
+      fullPath: '/api/guide'
+      preLoaderRoute: typeof ApiGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide/$eventId': {
+      id: '/guide/$eventId'
+      path: '/guide/$eventId'
+      fullPath: '/guide/$eventId'
+      preLoaderRoute: typeof GuideEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +223,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoyaltyRoute: LoyaltyRoute,
   PhotosRoute: PhotosRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiGuideRoute: ApiGuideRoute,
+  GuideEventIdRoute: GuideEventIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
