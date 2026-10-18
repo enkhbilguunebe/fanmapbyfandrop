@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BadgeCheck, Award, Music2, MapPin, Star, Ticket } from "lucide-react";
+import { BadgeCheck, Award, Music2, MapPin, Star, Ticket, Lock } from "lucide-react";
 import { Page } from "@/components/AppShell";
 import { ARTISTS, CONCERTS, LEVELS } from "@/lib/demo-data";
 import { useAccount } from "@/lib/account";
