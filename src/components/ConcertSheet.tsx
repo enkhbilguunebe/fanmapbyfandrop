@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { canParticipate, validReelDuration } from "@/lib/eligibility";
+import { DEMO_ATTENDANCE, usePresentationDemo } from "@/lib/presentation-demo";
+import passport from "@/assets/fanmap-passport.png.asset.json";
 
 type Tab = "overview" | "reels" | "predict" | "letters" | "guide";
 
@@ -23,8 +25,9 @@ export function ConcertSheet({ concert, onClose }: { concert: Concert; onClose: 
   const status = concertStatus(concert);
   const tickets = useApp((s) => s.tickets);
   const stamps = useApp((s) => s.stamps);
+  const { account } = useAccount();
   const hasTicket = tickets.includes(concert.id);
-  const stamp = stamps.find((s) => s.concertId === concert.id);
+  const stamp = stamps.find((s) => s.concertId === concert.id) ?? (account?.profile.is_demo && account.profile.username === "olivia" && DEMO_ATTENDANCE.includes(concert.id) ? { id: `DEMO-${concert.id}`, concertId: concert.id } : undefined);
   const verified = canParticipate(status === "past", hasTicket, !!stamp);
   const date = new Date(concert.date);
 
@@ -114,7 +117,7 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
     <div className="space-y-5">
       {stampId ? (
         <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card p-4">
-          <div className="grid h-14 w-14 place-items-center rounded-full border-2 border-dashed border-primary text-primary"><BadgeCheck className="h-6 w-6" /></div>
+          <img src={passport.url} alt="FanMap verified fan passport stamp" width={80} height={80} className="h-20 w-20 shrink-0 -rotate-12 object-contain" />
           <div><p className="font-medium">Passport stamp</p><p className="text-xs text-muted-foreground">Attendance record {stampId}</p></div>
         </div>
       ) : (
@@ -247,10 +250,18 @@ function Predict({ concert }: { concert: Concert }) {
 }
 
 function Letters({ concert }: { concert: Concert }) {
-  const all = useApp((s) => s.letters);
-  const liked = useApp((s) => s.likedLetters);
+  const saved = useApp((s) => s.letters);
+  const savedLikes = useApp((s) => s.likedLetters);
+  const { account } = useAccount();
+  const demo = usePresentationDemo();
+  const isDemo = !!account?.profile.is_demo;
+  const all = useMemo(() => [...saved, ...(isDemo ? demo.letters : [])], [saved, isDemo, demo.letters]);
+  const liked = [...savedLikes, ...(isDemo ? demo.liked : [])];
   const stamps = useApp((s) => s.stamps);
-  const { addLetter, deleteLetter, toggleLike } = useApp.getState();
+  const cloud = useApp.getState();
+  const addLetter = (cid: string, body: string, show: boolean) => isDemo ? demo.addLetter(cid, body) : cloud.addLetter(cid, body, show);
+  const deleteLetter = (id: string) => id.startsWith("demo-") ? demo.patchLetter(id, { concertId: "deleted" }) : cloud.deleteLetter(id);
+  const toggleLike = (id: string) => id.startsWith("demo-") ? demo.like(id) : cloud.toggleLike(id);
   const [sort, setSort] = useState<"liked" | "new" | "featured" | "discover">("featured");
   const [text, setText] = useState("");
   const [showCount, setShowCount] = useState(true);
@@ -267,6 +278,7 @@ function Letters({ concert }: { concert: Concert }) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-3">
+        {isDemo && <p className="mb-2 text-xs text-gold">Fictional demo letters · Sample likes · New demo posts stay in this session.</p>}
         <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={`Write to ${artistOf(concert).name}…`} className="min-h-20 border-0 bg-transparent p-1 focus-visible:ring-0" maxLength={1000} />
         <div className="mt-2 flex items-center justify-between">
           <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={showCount} onChange={(e) => setShowCount(e.target.checked)} className="accent-primary" />Show my concert count</label>
@@ -293,8 +305,8 @@ function Letters({ concert }: { concert: Concert }) {
           <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
             <button onClick={() => toggleLike(l.id)} className={cn("flex items-center gap-1", liked.includes(l.id) && "text-primary")}><Heart className="h-3.5 w-3.5" fill={liked.includes(l.id) ? "currentColor" : "none"} />{l.likes}</button>
             <span>{new Date(l.createdAt).toLocaleDateString()}</span>
-            {l.mine&&<Button variant="ghost" size="sm" onClick={async()=>{const text=prompt("Edit your letter",l.text);if(!text)return;const {error}=await supabase.rpc("fanmap_edit_letter",{l:l.id,body:text});if(error)toast.error(error.message);else await syncCloud();}}>Edit</Button>}
-            {l.mine ? <button onClick={() => deleteLetter(l.id)} className="flex items-center gap-1"><Trash2 className="h-3.5 w-3.5" />Delete</button> : <button onClick={async () => {const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {error}=await supabase.from("reports").insert({user_id:user.id,letter_id:l.id,reason:"Fan report"});if(error)toast.error(error.message);else toast.success("Report sent to moderators.");}}>Report</button>}
+            {l.mine&&<Button variant="ghost" size="sm" onClick={async()=>{const text=prompt("Edit your letter",l.text);if(!text)return;if(l.id.startsWith("demo-")){demo.patchLetter(l.id,{text});return;}const {error}=await supabase.rpc("fanmap_edit_letter",{l:l.id,body:text});if(error)toast.error(error.message);else await syncCloud();}}>Edit</Button>}
+            {l.mine ? <Button variant="ghost" size="sm" onClick={() => deleteLetter(l.id)}><Trash2 className="h-3.5 w-3.5" />Delete</Button> : !l.id.startsWith("demo-") && <Button variant="ghost" size="sm" onClick={async () => {const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {error}=await supabase.from("reports").insert({user_id:user.id,letter_id:l.id,reason:"Fan report"});if(error)toast.error(error.message);else toast.success("Report sent to moderators.");}}>Report</Button>}
           </div>
         </article>
       ))}

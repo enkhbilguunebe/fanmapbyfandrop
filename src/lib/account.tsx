@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAccount } from "./fanmap.functions";
 import { syncCloud, clearCloudState } from "./cloud-sync";
 import type { User } from "@supabase/supabase-js";
+import { DEMO_LETTERS, usePresentationDemo } from "./presentation-demo";
 type Account = Awaited<ReturnType<typeof getAccount>>;
 const Context = createContext<{
   user: User | null;
@@ -39,6 +40,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(event)) {
         if (event !== "USER_UPDATED") {
           clearCloudState();
+          usePresentationDemo.setState({ letters: DEMO_LETTERS, liked: [], chat: [] });
           setAccount(null);
           setLoading(true);
         }

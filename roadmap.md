@@ -1,5 +1,12 @@
 # FanMap upgrade
 
+## Judges' presentation refresh
+- [ ] Restyle settings to the supplied grouped profile reference while preserving controls.
+- [ ] Add labeled simulated friend locations, consent banner, meeting proposal and directions; refresh Find friends icon.
+- [ ] Populate varied artist attendance, eight or more letters, Olivia friends/chats and artist messages.
+- [ ] Use distinct artist pictures and uploaded passport stamps with pale backgrounds.
+- [ ] Verify presentation flows and existing tests.
+
 - [x] Enable Cloud and secure sign-in, profiles, demo accounts and role authorization.
 - [x] Connect shared concert attendance, activities, artist moderation and targeted messages.
 - [x] Refresh four fan pages, global account settings, Friends/Artists messaging and loyalty.

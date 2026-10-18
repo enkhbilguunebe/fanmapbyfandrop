@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LocationPanel } from "@/components/LocationPanel";
 import { cn } from "@/lib/utils";
+import { demoFriendRows, demoChatRows, DEMO_DELIVERIES, usePresentationDemo } from "@/lib/presentation-demo";
+import { FindFriendsIcon } from "@/components/FindFriendsIcon";
 export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
@@ -27,7 +29,9 @@ export const Route = createFileRoute("/chat")({
   component: Chat,
 });
 function Chat() {
-  const { user } = useAccount();
+  const { user, account } = useAccount();
+  const isDemo = !!account?.profile.is_demo && account.profile.username === "olivia";
+  const demoChat = usePresentationDemo(s => s.chat);
   const action = useServerFn(friendAction);
   const [segment, setSegment] = useState<"friends" | "artists">("friends");
   const [search, setSearch] = useState({ friends: "", artists: "" });
@@ -80,7 +84,10 @@ function Chat() {
   useEffect(() => {
     input.current?.focus();
   }, [open, busy]);
-  const accepted = friends.filter((f) => f.status === "accepted");
+  const visibleFriends = [...friends, ...(isDemo && user ? demoFriendRows(user.id) : [])];
+  const visibleMessages = [...(isDemo && user ? demoChatRows(user.id) : []), ...messages, ...(isDemo ? demoChat : [])];
+  const visibleDeliveries = [...(isDemo ? DEMO_DELIVERIES : []), ...deliveries];
+  const accepted = visibleFriends.filter((f) => f.status === "accepted");
   const selected = accepted.find((f) => f.id === open);
   const artist = open === "artist-nova";
   if (open && (selected || artist))
@@ -96,13 +103,14 @@ function Chat() {
           </Button>
           {!artist && (
             <Button variant="secondary" size="sm" onClick={() => setLocation(true)}>
-              <MapPin />
-              Share location
+              <FindFriendsIcon className="h-5 w-5" />
+              Find friends
             </Button>
           )}
         </div>
         <div className="min-h-64 space-y-4">
-          {(artist ? deliveries : messages.filter((m) => m.friendship_id === open)).map((m) => (
+          {isDemo && <p className="text-xs text-gold">Fictional demo conversations · New demo replies stay in this session.</p>}
+          {(artist ? visibleDeliveries : visibleMessages.filter((m) => m.friendship_id === open)).map((m) => (
             <div
               key={m.id}
               className={cn(
@@ -127,6 +135,7 @@ function Chat() {
             onSubmit={async (e) => {
               e.preventDefault();
               if (!text.trim() || !user) return;
+              if (open?.startsWith("demo-")) { usePresentationDemo.getState().send(open, user.id, text.trim()); setText(""); return; }
               setBusy(true);
               const { error } = await supabase
                 .from("friend_messages")
@@ -230,7 +239,7 @@ function Chat() {
               f.person?.display_name.toLowerCase().includes(search.friends.toLowerCase()),
             )
             .map((f) => {
-              const last = messages.filter((m) => m.friendship_id === f.id).at(-1);
+              const last = visibleMessages.filter((m) => m.friendship_id === f.id).at(-1);
               return (
                 <Button
                   variant="ghost"
@@ -266,7 +275,7 @@ function Chat() {
             </div>
           )}
         </>
-      ) : deliveries.length && "jasper vale".includes(search.artists.toLowerCase()) ? (
+      ) : visibleDeliveries.length && "jasper vale".includes(search.artists.toLowerCase()) ? (
         <Button
           variant="ghost"
           className="h-auto w-full justify-start border-b border-border py-4"
@@ -280,7 +289,7 @@ function Chat() {
               Jasper Vale
               <BadgeCheck className="text-success" />
             </p>
-            <p className="truncate text-xs text-muted-foreground">{deliveries.at(-1)?.text}</p>
+            <p className="truncate text-xs text-muted-foreground">{visibleDeliveries.at(-1)?.text}</p>
           </div>
         </Button>
       ) : (

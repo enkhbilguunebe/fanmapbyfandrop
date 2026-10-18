@@ -7,7 +7,8 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { toast } from "sonner";
-import { User, Upload, Trash2, Download, LogOut, BadgeCheck } from "lucide-react";
+import { User, Upload, Trash2, Download, LogOut, BadgeCheck, ArrowLeft, ChevronRight, Settings, SlidersHorizontal, ShieldCheck, Link as LinkIcon, Award, Sparkles, LockKeyhole } from "lucide-react";
+import { useApp } from "@/lib/store";
 export function AccountSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { account, user, refresh } = useAccount();
   const router = useRouter();
@@ -24,6 +25,8 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
   );
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [view, setView] = useState<"home" | "profile" | "social" | "preferences" | "security" | "privacy">("home");
+  const stampCount = useApp(s => s.stamps.length);
   const [photo, setPhoto] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState(50);
@@ -97,10 +100,20 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
   }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
-        <DialogTitle>Account & Settings</DialogTitle>
-        <DialogDescription>Your profile, preferences and privacy.</DialogDescription>
-        {preview ? (
+      <DialogContent className="settings-panel max-h-[90dvh] max-w-lg overflow-y-auto bg-background p-5 sm:rounded-3xl">
+        <div className="flex items-center gap-3 pr-8"><Button variant="ghost" size="icon" className="rounded-full bg-secondary" aria-label={view === "home" ? "Close settings" : "Back to profile"} onClick={() => { if (view === "home") onClose(); else { setView("home"); setPreview(false); } }}><ArrowLeft /></Button><DialogTitle className="flex-1 text-center font-medium">{view === "home" ? "Profile" : view === "profile" ? "Edit profile" : view === "security" ? "Account & Security" : view === "privacy" ? "Data & Privacy" : view === "social" ? "Social links" : "Preferences"}</DialogTitle></div>
+        <DialogDescription className="sr-only">Your FanMap profile, preferences and privacy.</DialogDescription>
+        {view === "home" ? <div className="space-y-5">
+          <Button variant="ghost" className="h-auto w-full justify-start rounded-3xl bg-card p-4 text-left" onClick={() => setView("profile")}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent text-lg font-semibold text-primary">{p?.display_name?.[0] ?? "F"}</span><span className="min-w-0 flex-1"><span className="block font-medium">{p?.display_name}</span><span className="block truncate text-xs font-normal text-muted-foreground">{user?.email}</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></Button>
+          <div className="flex items-center gap-4 rounded-3xl bg-foreground p-5 text-primary-foreground"><Sparkles className="h-9 w-9 shrink-0 text-gold" /><div className="flex-1"><p className="font-semibold">Your concert passport</p><p className="mt-1 text-xs opacity-75">{stampCount} concert memories · A story worth keeping</p></div><Button size="icon" variant="ghost" aria-label="Open loyalty passport" className="text-primary-foreground hover:bg-primary/30 hover:text-primary-foreground" onClick={() => { onClose(); void navigate({ to: "/loyalty" }); }}><ChevronRight /></Button></div>
+          <div className="overflow-hidden rounded-3xl bg-card px-4">
+            {([{ label: "Settings", icon: Settings, next: "profile" }, { label: "Account & Security", icon: LockKeyhole, next: "security" }, { label: "Social connections", icon: LinkIcon, next: "social" }] as const).map(({ label, icon: Icon, next }) => <Button key={label} variant="ghost" className="settings-row border-b border-border/50" onClick={() => setView(next)}><Icon className="h-5 w-5" /><span className="flex-1 text-left">{label}</span><ChevronRight className="h-4 w-4" /></Button>)}
+            <Button variant="ghost" className="settings-row" onClick={() => { onClose(); void navigate({ to: "/loyalty" }); }}><Award className="h-5 w-5" /><span className="flex-1 text-left">Badges & milestones</span><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+          <div className="overflow-hidden rounded-3xl bg-card px-4"><Button variant="ghost" className="settings-row border-b border-border/50" onClick={() => setView("preferences")}><SlidersHorizontal className="h-5 w-5" /><span className="flex-1 text-left">Preferences</span><ChevronRight className="h-4 w-4" /></Button><Button variant="ghost" className="settings-row" onClick={() => setView("privacy")}><ShieldCheck className="h-5 w-5" /><span className="flex-1 text-left">Data & Privacy</span><ChevronRight className="h-4 w-4" /></Button></div>
+          <Button variant="ghost" className="h-14 w-full justify-start rounded-3xl bg-card px-6 text-destructive" onClick={async () => { await router.options.context?.queryClient.cancelQueries(); router.options.context?.queryClient.clear(); await supabase.auth.signOut(); await refresh(); onClose(); await navigate({ to: "/auth", replace: true }); }}><LogOut className="h-5 w-5" />Sign out</Button>
+          <p className="text-center text-[11px] text-muted-foreground">FanMap · Music brings us closer{p?.is_demo ? " · Demo account" : ""}</p>
+        </div> : preview ? (
           <section>
             <h2 className="text-xl font-semibold">{name}</h2>
             <p className="text-primary">@{username}</p>
@@ -124,7 +137,7 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
           </section>
         ) : (
           <>
-            <section className="space-y-3 border-b border-border pb-5">
+            <section className={view === "profile" ? "space-y-3 rounded-2xl bg-card p-4" : "hidden"}>
               <h2 className="flex items-center gap-2 font-semibold">
                 <User />
                 My Profile
@@ -243,7 +256,7 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
                 Preview public profile
               </Button>
             </section>
-            <section className="space-y-2 border-b border-border pb-5">
+            <section className={view === "social" ? "space-y-3 rounded-2xl bg-card p-4" : "hidden"}>
               <h2 className="font-semibold">Social links</h2>
               {["Instagram", "TikTok", "Facebook", "YouTube", "Spotify", "Website"].map((k) => (
                 <label key={k} className="block text-xs">
@@ -261,7 +274,7 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
                 Social links appear publicly only when profile visibility is enabled.
               </p>
             </section>
-            <section className="space-y-3 border-b border-border pb-5">
+            <section className={view === "preferences" ? "space-y-4 rounded-2xl bg-card p-4" : "hidden"}>
               <h2 className="font-semibold">Preferences</h2>
               {(
                 [
@@ -282,10 +295,10 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
                 </label>
               ))}
               <p className="text-xs text-muted-foreground">
-                Dark appearance · Live location is off until you explicitly start a session.
+                Light appearance · Find friends uses fictional locations for this presentation.
               </p>
             </section>
-            <section className="space-y-3 border-b border-border pb-5">
+            <section className={view === "security" ? "space-y-3 rounded-2xl bg-card p-4" : "hidden"}>
               <h2 className="font-semibold">Account & Security</h2>
               <p className="break-all text-sm">{user?.email}</p>
               <p className="text-xs text-muted-foreground">
@@ -325,7 +338,7 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
                 Change password
               </Button>
             </section>
-            <section>
+            <section className={view === "privacy" ? "rounded-2xl bg-card p-4" : "hidden"}>
               <h2 className="mb-3 font-semibold">Data & Privacy</h2>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -371,7 +384,7 @@ export function AccountSettings({ open, onClose }: { open: boolean; onClose: () 
                 </Button>
               </div>
             </section>
-            <Button onClick={save} disabled={busy || !name.trim()} className="w-full">
+            <Button onClick={save} disabled={busy || !name.trim()} className={view === "security" || view === "privacy" ? "hidden" : "w-full"}>
               {busy ? "Saving…" : "Save changes"}
             </Button>
             <Button

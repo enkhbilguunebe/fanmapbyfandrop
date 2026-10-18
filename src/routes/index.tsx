@@ -8,6 +8,7 @@ import { CONCERTS, artistOf, type Concert } from "@/lib/demo-data";
 import { useApp, type MapStyle } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { LocationPanel } from "@/components/LocationPanel";
+import { FindFriendsIcon } from "@/components/FindFriendsIcon";
 import { cn } from "@/lib/utils";
 
 const MapView = lazy(() => import("@/components/MapView"));
@@ -123,8 +124,9 @@ function MapScreen() {
           <ConcertSheet key={selected.id} concert={selected} onClose={() => setSelected(null)} />
         )}
         <div className="absolute bottom-28 left-4 z-20">
-          <Button variant="secondary" onClick={() => setLocations(true)}>
-            Find friends
+          <Button variant="secondary" className="h-14 rounded-full border border-primary/20 bg-card px-5 shadow-float" onClick={() => setLocations(true)}>
+            <FindFriendsIcon className="size-8 text-primary" />
+            <span className="find-friends-script text-lg text-primary">Find friends</span>
           </Button>
         </div>
         <LocationPanel open={locations} onClose={() => setLocations(false)} />
