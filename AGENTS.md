@@ -11,3 +11,4 @@
 
 - Map uses maplibre-gl v4 (v6 worker breaks under Vite prebundling) with OpenFreeMap/Esri keyless styles; MapView is lazy + ClientOnly because it touches window.
 - Demo state lives in a persisted zustand store (src/lib/store.ts, skipHydration + rehydrate in __root) until Lovable Cloud is enabled; demo data in src/lib/demo-data.ts is fictional.
+- Lovable Cloud is connected; migrate personal and shared features to authenticated Cloud data, never treat the legacy demo store as an authorization boundary, because browser state is user-editable.
