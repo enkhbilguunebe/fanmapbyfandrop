@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BadgeCheck, Award, Music2, MapPin, Star, Ticket } from "lucide-react";
+import { BadgeCheck, Award, Music2, MapPin, Star, Ticket, Lock } from "lucide-react";
 import { Page } from "@/components/AppShell";
 import { ARTISTS, CONCERTS, LEVELS } from "@/lib/demo-data";
 import { useAccount } from "@/lib/account";
@@ -142,15 +142,33 @@ function Loyalty() {
             ["Superfan", 7],
             ["Tour Legend", 12],
           ].map(([label, n]) => (
-            <div key={label} className="rounded-lg border border-border p-3 text-center">
-              <Award
-                className={
-                  attended.length >= Number(n)
-                    ? "mx-auto text-gold"
-                    : "mx-auto text-muted-foreground"
-                }
-              />
-              <p className="mt-2 text-xs">{label}</p>
+            <div
+              key={label}
+              className={
+                attended.length >= Number(n)
+                  ? "rounded-lg border border-gold/30 bg-card p-3 text-center"
+                  : "rounded-lg border border-border bg-card/60 p-3 text-center"
+              }
+            >
+              <div className="relative mx-auto grid h-10 w-10 place-items-center">
+                <Award
+                  className={
+                    attended.length >= Number(n)
+                      ? "text-gold"
+                      : "text-muted-foreground/40"
+                  }
+                />
+                {attended.length < Number(n) && (
+                  <span className="absolute inset-0 grid place-items-center rounded-full bg-background/55">
+                    <Lock className="h-4 w-4 text-foreground/60" strokeWidth={2.4} />
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-2 text-xs ${attended.length >= Number(n) ? "" : "text-muted-foreground"}`}
+              >
+                {label}
+              </p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 {attended.length >= Number(n) ? "Unlocked" : `${n} concerts`}
               </p>
