@@ -139,12 +139,14 @@ function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: 
       if (deadlines.length) expiry = setTimeout(() => { clear(); void refresh(); }, Math.min(...deadlines));
     };
     void refresh();
+    const onRefresh = () => { void refresh(); };
+    window.addEventListener("fanmap-location-refresh", onRefresh);
     const channel = supabase.channel("map-friend-locations")
       .on("postgres_changes", { event: "*", schema: "public", table: "location_positions" }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "location_sessions" }, () => void refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => void refresh())
       .subscribe();
-    return () => { disposed = true; if (expiry) clearTimeout(expiry); clear(); void supabase.removeChannel(channel); };
+    return () => { disposed = true; window.removeEventListener("fanmap-location-refresh", onRefresh); if (expiry) clearTimeout(expiry); clear(); void supabase.removeChannel(channel); };
   }, [user?.id]);
 
   return <div className="absolute inset-0"><div ref={el} className="h-full w-full" /></div>;

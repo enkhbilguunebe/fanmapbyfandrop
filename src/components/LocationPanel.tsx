@@ -35,6 +35,7 @@ export function LocationPanel({
       if ("sessions" in r) {
         setSessions(r.sessions ?? []);
         setPositions(r.positions ?? []);
+        window.dispatchEvent(new Event("fanmap-location-refresh"));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load sharing");
