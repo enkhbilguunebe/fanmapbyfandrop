@@ -158,7 +158,7 @@ function Loyalty() {
                       : "text-muted-foreground/40"
                   }
                 />
-                {!earned && (
+                {attended.length < Number(n) && (
                   <span className="absolute inset-0 grid place-items-center rounded-full bg-background/55">
                     <Lock className="h-4 w-4 text-foreground/60" strokeWidth={2.4} />
                   </span>
