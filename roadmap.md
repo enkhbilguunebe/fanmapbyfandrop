@@ -1,11 +1,13 @@
 # FanMap upgrade
 
 ## Judges' presentation refresh
-- [ ] Restyle settings to the supplied grouped profile reference while preserving controls.
-- [ ] Add labeled simulated friend locations, consent banner, meeting proposal and directions; refresh Find friends icon.
-- [ ] Populate varied artist attendance, eight or more letters, Olivia friends/chats and artist messages.
-- [ ] Use distinct artist pictures and uploaded passport stamps with pale backgrounds.
-- [ ] Verify presentation flows and existing tests.
+- [x] Restyle settings to the supplied grouped profile reference while preserving controls.
+- [x] Add labeled simulated friend locations, consent banner, meeting proposal and directions; refresh Find friends icon.
+- [x] Populate varied artist attendance, eight or more letters, Olivia friends/chats and artist messages.
+- [x] Use distinct artist pictures and uploaded passport stamps with pale backgrounds.
+- [x] Verify presentation flows and existing tests.
+
+Presentation checks: Olivia has seven demo shows across five artists, five populated friend threads and three sample artist announcements. Settings and simulated consent/meeting/directions tested; new demo chat and fan letter read back. Jasper's 40 sample letters and newest sorting render after actual demo sign-in. Mobile settings have no horizontal overflow. All 11 tests pass. Presentation content is labeled fictional, kept in memory, and never grants Cloud permissions; the public Find friends password is `fanmap`, not an account credential.
 
 - [x] Enable Cloud and secure sign-in, profiles, demo accounts and role authorization.
 - [x] Connect shared concert attendance, activities, artist moderation and targeted messages.
