@@ -26,8 +26,8 @@ export function AuthScreen() {
       const s = await loginDemo({ data: { account } });
       const { error } = await supabase.auth.setSession(s);
       if (error) throw error;
-      await refresh();
       await navigate({ to: account === "jasper" ? "/artist" : "/" });
+      await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
@@ -89,8 +89,8 @@ export function AuthScreen() {
               } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                await refresh();
                 await navigate({ to: "/" });
+                await refresh();
               }
             } catch (e) {
               setError(e instanceof Error ? e.message : "Please try again");
