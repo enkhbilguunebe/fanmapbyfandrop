@@ -158,3 +158,8 @@
 .settings-panel [data-slot="dialog-close"]{top:1.35rem;right:1.25rem;}
 .settings-row{height:3.5rem;width:100%;justify-content:flex-start;border-radius:0;font-weight:400;}
 .settings-row svg{color:var(--muted-foreground);}
+
+.fm-tour-pin { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; cursor: pointer; border: 3px solid var(--card); box-shadow: 0 4px 12px oklch(0 0 0 / .25); }
+.fm-tour-pin.past { background: var(--primary); color: var(--primary-foreground); }
+.fm-tour-pin.today { background: var(--gold, var(--primary)); color: var(--foreground); }
+.fm-tour-pin.upcoming { background: var(--card); color: var(--primary); border-color: var(--primary); border-style: dashed; }
