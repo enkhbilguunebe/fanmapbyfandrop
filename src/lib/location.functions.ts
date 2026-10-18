@@ -25,18 +25,7 @@ export const locationAction = createServerFn({ method: "POST" })
       .single();
     if (role?.role !== "fan") throw new Error("Artists cannot access friend locations");
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-    await admin
-      .from("location_positions")
-      .delete()
-      .in(
-        "session_id",
-        (
-          await admin
-            .from("location_sessions")
-            .select("id")
-            .lt("expires_at", new Date().toISOString())
-        ).data?.map((s) => s.id) ?? [],
-      );
+    await admin.rpc("fanmap_location_cleanup");
     if (data.action === "request" || data.action === "reciprocal") {
       const {
         data: { user },
@@ -88,57 +77,10 @@ export const locationAction = createServerFn({ method: "POST" })
       .single();
     if (!s || s.status !== "active" || !s.expires_at || new Date(s.expires_at) <= new Date())
       throw new Error("Sharing is stopped or expired");
-    if (data.action === "reciprocal") {
-      if (s.receiver_id !== userId) throw new Error("Not the receiving friend");
-      const { error } = await admin
-        .from("location_sessions")
-        .update({ receiver_consent: true })
-        .eq("id", s.id);
-      if (error) throw error;
-      return { ok: true };
-    }
-    if (data.action === "position") {
-      if (
-        (s.sender_id === userId && !s.sender_consent) ||
-        (s.receiver_id === userId && !s.receiver_consent)
-      )
-        throw new Error("Explicit sharing consent required");
-      if (data.lat === undefined || data.lng === undefined || data.accuracy === undefined)
-        throw new Error("Missing coordinates");
-      const { error } = await admin
-        .from("location_positions")
-        .upsert({
-          session_id: s.id,
-          user_id: userId,
-          lat: data.lat,
-          lng: data.lng,
-          accuracy: data.accuracy,
-          updated_at: new Date().toISOString(),
-        });
-      if (error) throw error;
-      return { ok: true };
-    }
-    if (data.action === "meet") {
-      if (data.lat === undefined || data.lng === undefined)
-        throw new Error("Select a meeting point");
-      const { error } = await admin
-        .from("location_sessions")
-        .update({
-          meeting_lat: data.lat,
-          meeting_lng: data.lng,
-          meeting_proposer: userId,
-          meeting_accepted: false,
-        })
-        .eq("id", s.id);
-      if (error) throw error;
-    } else {
-      if (s.meeting_proposer === userId || s.meeting_lat === null)
-        throw new Error("The other friend must accept");
-      const { error } = await admin
-        .from("location_sessions")
-        .update({ meeting_accepted: true })
-        .eq("id", s.id);
-      if (error) throw error;
-    }
+    const { error } = await admin.rpc("fanmap_location_write", {
+      sid: s.id, uid: userId, act: data.action,
+      latitude: data.lat ?? null, longitude: data.lng ?? null, precision_m: data.accuracy ?? null,
+    });
+    if (error) throw new Error("Sharing stopped or permission denied");
     return { ok: true };
   });

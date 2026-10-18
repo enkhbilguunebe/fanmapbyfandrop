@@ -224,25 +224,8 @@ export const friendAction = createServerFn({ method: "POST" })
       return { ok: true };
     }
     if (["accept", "decline", "block"].includes(data.action)) {
-      const { data: f } = await supabase
-        .from("friendships")
-        .select()
-        .eq("id", data.value ?? "")
-        .single();
-      if (!f || f.status === "blocked" || (data.action !== "block" && f.receiver_id !== userId))
-        throw new Error("Request cannot be changed");
-      const { error } = await admin
-        .from("friendships")
-        .update({
-          status:
-            data.action === "accept"
-              ? "accepted"
-              : data.action === "block"
-                ? "blocked"
-                : "declined",
-        })
-        .eq("id", f.id);
-      if (error) throw error;
+      const { error } = await supabase.rpc("fanmap_friend_transition", { fid: data.value ?? "", act: data.action });
+      if (error) throw new Error("Request cannot be changed");
       return { ok: true };
     }
     const { data: friends, error } = await supabase.from("friendships").select("*");
