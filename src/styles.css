@@ -143,3 +143,5 @@
 
 .auth-scrim{background:linear-gradient(to bottom,transparent,var(--background))}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.qr-surface{background:oklch(1 0 0);color:oklch(0 0 0)}
