@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArtistRouteImport } from './routes/artist'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
 import { Route as PhotosRouteImport } from './routes/photos'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const ArtistRoute = ArtistRouteImport.update({
   id: '/artist',
   path: '/artist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -40,43 +47,78 @@ const PhotosRoute = PhotosRouteImport.update({
   path: '/photos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/artist': typeof ArtistRoute
+  '/auth': typeof AuthRoute
   '/chat': typeof ChatRoute
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/artist': typeof ArtistRoute
+  '/auth': typeof AuthRoute
   '/chat': typeof ChatRoute
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/artist': typeof ArtistRoute
+  '/auth': typeof AuthRoute
   '/chat': typeof ChatRoute
   '/loyalty': typeof LoyaltyRoute
   '/photos': typeof PhotosRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
+  fullPaths:
+    | '/'
+    | '/artist'
+    | '/auth'
+    | '/chat'
+    | '/loyalty'
+    | '/photos'
+    | '/reset-password'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
-  id: '__root__' | '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
+  to:
+    | '/'
+    | '/artist'
+    | '/auth'
+    | '/chat'
+    | '/loyalty'
+    | '/photos'
+    | '/reset-password'
+  id:
+    | '__root__'
+    | '/'
+    | '/artist'
+    | '/auth'
+    | '/chat'
+    | '/loyalty'
+    | '/photos'
+    | '/reset-password'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArtistRoute: typeof ArtistRoute
+  AuthRoute: typeof AuthRoute
   ChatRoute: typeof ChatRoute
   LoyaltyRoute: typeof LoyaltyRoute
   PhotosRoute: typeof PhotosRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -93,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/artist'
       fullPath: '/artist'
       preLoaderRoute: typeof ArtistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -116,15 +165,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PhotosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArtistRoute: ArtistRoute,
+  AuthRoute: AuthRoute,
   ChatRoute: ChatRoute,
   LoyaltyRoute: LoyaltyRoute,
   PhotosRoute: PhotosRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

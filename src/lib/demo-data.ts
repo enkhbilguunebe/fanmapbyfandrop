@@ -20,12 +20,12 @@ export type Concert = {
 };
 
 export const ARTISTS: Artist[] = [
-  { id: "nova", name: "Nova Lane", genre: "Alt-pop" },
+  { id: "nova", name: "Jasper Vale", genre: "Alt-pop" },
   { id: "harbor", name: "The Harbor Lights", genre: "Indie rock" },
   { id: "mira", name: "Mira Sol", genre: "Soul" },
 ];
 
-const today = new Date();
+const today = new Date("2026-10-18T12:00:00Z");
 const d = (days: number) => {
   const x = new Date(today);
   x.setDate(x.getDate() + days);
@@ -41,9 +41,12 @@ export const CONCERTS: Concert[] = [
   { id: "c-boston", artistId: "mira", tour: "Golden Hour", venue: "House of Blues", city: "Boston", lng: -71.0955, lat: 42.3473, date: d(-90), cover: c3, ticketCode: "DEMO-BOS-001", checkinCode: "VENUE-BOS-QR" },
   { id: "c-ottawa", artistId: "nova", tour: "Afterglow Tour", venue: "Canadian Tire Centre", city: "Ottawa", lng: -75.927, lat: 45.2969, date: d(14), cover: c3, ticketCode: "DEMO-OTT-001", checkinCode: "VENUE-OTT-QR" },
   { id: "c-philly", artistId: "harbor", tour: "Low Tide", venue: "The Fillmore", city: "Philadelphia", lng: -75.1335, lat: 39.9659, date: d(30), cover: c1, ticketCode: "DEMO-PHL-001", checkinCode: "VENUE-PHL-QR" },
+  { id: "c-detroit", artistId: "nova", tour: "Afterglow Tour", venue: "Fox Theatre", city: "Detroit", lng: -83.0528, lat: 42.3385, date: d(-150), cover: c1, ticketCode: "DEMO-DET-001", checkinCode: "VENUE-DET-QR" },
+  { id: "c-cleveland", artistId: "nova", tour: "Afterglow Tour", venue: "Rocket Arena", city: "Cleveland", lng: -81.688, lat: 41.496, date: d(-180), cover: c2, ticketCode: "DEMO-CLE-001", checkinCode: "VENUE-CLE-QR" },
+  { id: "c-pittsburgh", artistId: "nova", tour: "Afterglow Tour", venue: "PPG Paints Arena", city: "Pittsburgh", lng: -79.989, lat: 40.439, date: d(-210), cover: c3, ticketCode: "DEMO-PIT-001", checkinCode: "VENUE-PIT-QR" },
 ];
 
-export const artistOf = (c: Concert) => ARTISTS.find((a) => a.id === c.artistId)!;
+export const artistOf = (c: Concert) => ARTISTS.find((a) => a.id === c.artistId) ?? { id: c.artistId, name: "Artist", genre: "Live music" };
 
 export type ConcertStatus = "past" | "today" | "upcoming";
 export function concertStatus(c: Concert, now = new Date()): ConcertStatus {
@@ -81,7 +84,7 @@ export const SEED_LETTERS: Letter[] = [
   { id: "l4", concertId: "c-nyc", author: "Marcus L.", text: "MSG was my first concert ever. My dad took me. We still talk about it.", likes: 132, createdAt: d(-118) },
 ];
 
-export type Reel = { id: string; concertId: string; author: string; poster: string; caption: string; status: "approved" | "pending" };
+export type Reel = { id: string; concertId: string; author: string; poster: string; caption: string; status: "approved" | "pending"; video?: string | undefined };
 export const SEED_REELS: Reel[] = [
   { id: "r1", concertId: "c-toronto", author: "Aiko T.", poster: c1, caption: "Lights drop on Afterglow", status: "approved" },
   { id: "r2", concertId: "c-toronto", author: "Jordan K.", poster: c2, caption: "Whole arena singing", status: "approved" },
