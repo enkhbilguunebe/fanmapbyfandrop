@@ -14,7 +14,7 @@ const raster = (tiles: string[], attribution: string): StyleSpecification => ({
 const STYLES: Record<MapStyle, StyleSpecification> = {
   default: raster(["https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png"], "© OpenStreetMap © CARTO"),
   satellite: raster(["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "© Esri"),
-  fanmap: raster(["https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png", ], "© OpenStreetMap © CARTO"),
+  fanmap: raster(["https://a.basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}@2x.png", ], "© OpenStreetMap © CARTO"),
 };
 
 export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: [number, number] | null }) {
