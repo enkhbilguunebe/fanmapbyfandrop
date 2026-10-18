@@ -1,8 +1,258 @@
-import { createServerFn } from '@tanstack/react-start';
-import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
-import { z } from 'zod';
-export const demoLogin=createServerFn({method:'POST'}).inputValidator(z.object({account:z.enum(['alex','olivia','jasper'])})).handler(async({data})=>{const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const email=`${data.account}@fanmap.demo`;const {data:users,error}=await supabaseAdmin.auth.admin.listUsers();if(error)throw error;const user=users.users.find(u=>u.email===email);if(!user)throw new Error('Demo account unavailable');const {data:p}=await supabaseAdmin.from('profiles').select('is_demo').eq('id',user.id).single();if(!p?.is_demo)throw new Error('Not a demonstration account');const {data:link,error:e}=await supabaseAdmin.auth.admin.generateLink({type:'magiclink',email});if(e)throw e;const {data:session,error:s}=await supabaseAdmin.auth.verifyOtp({type:'magiclink',token_hash:link.properties.hashed_token});if(s||!session.session)throw new Error('Demo sign-in failed');return {access_token:session.session.access_token,refresh_token:session.session.refresh_token};});
-export const getAccount=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).handler(async({context})=>{const {data:profile,error}=await context.supabase.from('profiles').select('*').eq('id',context.userId).single();if(error)throw error;const {data:role}=await context.supabase.from('user_roles').select('*').eq('user_id',context.userId).single();const {data:attendance}=await context.supabase.from('attendance').select('*');const {data:tickets}=await context.supabase.from('tickets').select('*');return {profile,role,attendance:attendance??[],tickets:tickets??[]};});
-export const artistAudience=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).handler(async({context})=>{const {data:r}=await context.supabase.from('user_roles').select('*').eq('user_id',context.userId).single();if(r?.role!=='artist'||!r.artist_id)throw new Error('Artist permission required');const {data:rows,error}=await context.supabase.from('attendance').select('user_id,events!inner(artist_id)').eq('events.artist_id',r.artist_id);if(error)throw error;const counts=new Map<string,number>();for(const row of rows??[])counts.set(row.user_id,(counts.get(row.user_id)??0)+1);const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const {data:profiles}=await supabaseAdmin.from('profiles').select('id,display_name,preferences,is_demo').in('id',[...counts.keys()]);return (profiles??[]).map(p=>({id:p.id,name:p.display_name,count:counts.get(p.id)??0,optIn:!!(p.preferences as Record<string,unknown>)?.announcements,isDemo:p.is_demo}));});
-export const sendAnnouncement=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(z.object({text:z.string().trim().min(1).max(4000),min:z.number().int().min(1),path:z.string().nullable(),type:z.string().nullable()})).handler(async({context,data})=>{const {data:r}=await context.supabase.from('user_roles').select('*').eq('user_id',context.userId).single();if(r?.role!=='artist'||!r.artist_id)throw new Error('Artist permission required');if(data.path&&!data.path.startsWith(context.userId+'/'))throw new Error('Invalid media');const {data:rows,error}=await context.supabase.from('attendance').select('user_id,events!inner(artist_id)').eq('events.artist_id',r.artist_id);if(error)throw error;const counts=new Map<string,number>();for(const row of rows??[])counts.set(row.user_id,(counts.get(row.user_id)??0)+1);const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const {data:sender}=await context.supabase.from('profiles').select('is_demo').eq('id',context.userId).single();const {data:profiles}=await supabaseAdmin.from('profiles').select('id,preferences,is_demo').in('id',[...counts.keys()]);const recipients=(profiles??[]).filter(p=>(counts.get(p.id)??0)>=data.min&&(p.preferences as Record<string,unknown>)?.announcements&&(!sender?.is_demo||p.is_demo));if(!recipients.length)return {count:0};const {error:e}=await supabaseAdmin.from('deliveries').insert(recipients.map(p=>({recipient_id:p.id,sender_id:context.userId,artist_id:r.artist_id,text:data.text,media_path:data.path,media_type:data.type})));if(e)throw e;return {count:recipients.length};});
-export const friendAction=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(z.object({action:z.enum(['qr','lookup','request','accept','decline','block','list']),value:z.string().optional()})).handler(async({context,data})=>{const {supabase,userId}=context;const {data:verified}=await supabase.rpc('fanmap_verified');if(!verified)throw new Error('Verify a concert ticket before connecting');const {supabaseAdmin:admin}=await import('@/integrations/supabase/client.server');if(data.action==='qr'){const {error}=await admin.from('connection_tokens').delete().eq('user_id',userId);if(error)throw error;const {data:t,error:e}=await admin.from('connection_tokens').insert({user_id:userId}).select().single();if(e)throw e;return {token:t.token,expires:t.expires_at};}if(data.action==='lookup'){let id:string|undefined;if(data.value?.startsWith('fanmap:')){const {data:t}=await admin.from('connection_tokens').select('user_id').eq('token',data.value.slice(7)).gt('expires_at',new Date().toISOString()).maybeSingle();id=t?.user_id;}else{const {data:p}=await admin.from('profiles').select('id').eq('username',data.value?.replace('@','').toLowerCase()??'').maybeSingle();id=p?.id;}if(!id||id===userId)throw new Error('Invalid, expired or own QR');const {data:p}=await admin.from('profiles').select('id,display_name,username').eq('id',id).single();return {person:p};}if(data.action==='request'){const target=data.value;if(!target||target===userId)throw new Error('Invalid friend');const {data:role}=await admin.from('user_roles').select('role').eq('user_id',target).single();const {data:p}=await admin.from('profiles').select('preferences').eq('id',target).single();const {count:t}=await admin.from('tickets').select('*',{count:'exact',head:true}).eq('user_id',target);const {count:a}=await admin.from('attendance').select('*',{count:'exact',head:true}).eq('user_id',target);if(role?.role!=='fan'||!(t||a)||(p?.preferences as Record<string,unknown>)?.friendRequests===false)throw new Error('This fan is not accepting eligible friend requests');const {error}=await admin.from('friendships').insert({sender_id:userId,receiver_id:target});if(error)throw new Error('Already connected, pending or blocked');return {ok:true};}if(['accept','decline','block'].includes(data.action)){const {data:f}=await supabase.from('friendships').select().eq('id',data.value??'').single();if(!f||f.status==='blocked'||(data.action!=='block'&&f.receiver_id!==userId))throw new Error('Request cannot be changed');const {error}=await admin.from('friendships').update({status:data.action==='accept'?'accepted':data.action==='block'?'blocked':'declined'}).eq('id',f.id);if(error)throw error;return {ok:true};}const {data:friends,error}=await supabase.from('friendships').select('*');if(error)throw error;const ids=(friends??[]).map(f=>f.sender_id===userId?f.receiver_id:f.sender_id);const {data:people}=await admin.from('profiles').select('id,display_name,username').in('id',ids);return {friends:(friends??[]).map(f=>({...f,person:people?.find(p=>p.id===(f.sender_id===userId?f.receiver_id:f.sender_id))}))};});
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+export const demoLogin = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ account: z.enum(["alex", "olivia", "jasper"]) }))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = `${data.account}@fanmap.demo`;
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    if (error) throw error;
+    const user = users.users.find((u) => u.email === email);
+    if (!user) throw new Error("Demo account unavailable");
+    const { data: p } = await supabaseAdmin
+      .from("profiles")
+      .select("is_demo")
+      .eq("id", user.id)
+      .single();
+    if (!p?.is_demo) throw new Error("Not a demonstration account");
+    const { data: link, error: e } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
+    if (e) throw e;
+    const { data: session, error: s } = await supabaseAdmin.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: link.properties.hashed_token,
+    });
+    if (s || !session.session) throw new Error("Demo sign-in failed");
+    return {
+      access_token: session.session.access_token,
+      refresh_token: session.session.refresh_token,
+    };
+  });
+export const getAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile, error } = await context.supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", context.userId)
+      .single();
+    if (error) throw error;
+    const { data: role } = await context.supabase
+      .from("user_roles")
+      .select("*")
+      .eq("user_id", context.userId)
+      .single();
+    const { data: attendance } = await context.supabase.from("attendance").select("*");
+    const { data: tickets } = await context.supabase.from("tickets").select("*");
+    return { profile, role, attendance: attendance ?? [], tickets: tickets ?? [] };
+  });
+export const artistAudience = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: r } = await context.supabase
+      .from("user_roles")
+      .select("*")
+      .eq("user_id", context.userId)
+      .single();
+    if (r?.role !== "artist" || !r.artist_id) throw new Error("Artist permission required");
+    const { data: rows, error } = await context.supabase
+      .from("attendance")
+      .select("user_id,events!inner(artist_id)")
+      .eq("events.artist_id", r.artist_id);
+    if (error) throw error;
+    const counts = new Map<string, number>();
+    for (const row of rows ?? []) counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id,display_name,preferences,is_demo")
+      .in("id", [...counts.keys()]);
+    return (profiles ?? []).map((p) => ({
+      id: p.id,
+      name: p.display_name,
+      count: counts.get(p.id) ?? 0,
+      optIn: !!(p.preferences as Record<string, unknown>)?.["announcements"],
+      isDemo: p.is_demo,
+    }));
+  });
+export const sendAnnouncement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      text: z.string().trim().min(1).max(4000),
+      min: z.number().int().min(1),
+      path: z.string().nullable(),
+      type: z.string().nullable(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: r } = await context.supabase
+      .from("user_roles")
+      .select("*")
+      .eq("user_id", context.userId)
+      .single();
+    if (r?.role !== "artist" || !r.artist_id) throw new Error("Artist permission required");
+    if (data.path && !data.path.startsWith(context.userId + "/")) throw new Error("Invalid media");
+    const { data: rows, error } = await context.supabase
+      .from("attendance")
+      .select("user_id,events!inner(artist_id)")
+      .eq("events.artist_id", r.artist_id);
+    if (error) throw error;
+    const counts = new Map<string, number>();
+    for (const row of rows ?? []) counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: sender } = await context.supabase
+      .from("profiles")
+      .select("is_demo")
+      .eq("id", context.userId)
+      .single();
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id,preferences,is_demo")
+      .in("id", [...counts.keys()]);
+    const recipients = (profiles ?? []).filter(
+      (p) =>
+        (counts.get(p.id) ?? 0) >= data.min &&
+        (p.preferences as Record<string, unknown>)?.["announcements"] &&
+        (!sender?.is_demo || p.is_demo),
+    );
+    if (!recipients.length) return { count: 0 };
+    const { error: e } = await supabaseAdmin
+      .from("deliveries")
+      .insert(
+        recipients.map((p) => ({
+          recipient_id: p.id,
+          sender_id: context.userId,
+          artist_id: r.artist_id ?? "",
+          text: data.text,
+          media_path: data.path,
+          media_type: data.type,
+        })),
+      );
+    if (e) throw e;
+    return { count: recipients.length };
+  });
+export const friendAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      action: z.enum(["qr", "lookup", "request", "accept", "decline", "block", "list"]),
+      value: z.string().optional(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: verified } = await supabase.rpc("fanmap_verified");
+    if (!verified) throw new Error("Verify a concert ticket before connecting");
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    if (data.action === "qr") {
+      const { error } = await admin.from("connection_tokens").delete().eq("user_id", userId);
+      if (error) throw error;
+      const { data: t, error: e } = await admin
+        .from("connection_tokens")
+        .insert({ user_id: userId })
+        .select()
+        .single();
+      if (e) throw e;
+      return { token: t.token, expires: t.expires_at };
+    }
+    if (data.action === "lookup") {
+      let id: string | undefined;
+      if (data.value?.startsWith("fanmap:")) {
+        const { data: t } = await admin
+          .from("connection_tokens")
+          .select("user_id")
+          .eq("token", data.value.slice(7))
+          .gt("expires_at", new Date().toISOString())
+          .maybeSingle();
+        id = t?.user_id;
+      } else {
+        const { data: p } = await admin
+          .from("profiles")
+          .select("id")
+          .eq("username", data.value?.replace("@", "").toLowerCase() ?? "")
+          .maybeSingle();
+        id = p?.id;
+      }
+      if (!id || id === userId) throw new Error("Invalid, expired or own QR");
+      const { data: p } = await admin
+        .from("profiles")
+        .select("id,display_name,username")
+        .eq("id", id)
+        .single();
+      return { person: p };
+    }
+    if (data.action === "request") {
+      const target = data.value;
+      if (!target || target === userId) throw new Error("Invalid friend");
+      const { data: role } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", target)
+        .single();
+      const { data: p } = await admin
+        .from("profiles")
+        .select("preferences")
+        .eq("id", target)
+        .single();
+      const { count: t } = await admin
+        .from("tickets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", target);
+      const { count: a } = await admin
+        .from("attendance")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", target);
+      if (
+        role?.role !== "fan" ||
+        !(t || a) ||
+        (p?.preferences as Record<string, unknown>)?.["friendRequests"] === false
+      )
+        throw new Error("This fan is not accepting eligible friend requests");
+      const { error } = await admin
+        .from("friendships")
+        .insert({ sender_id: userId, receiver_id: target });
+      if (error) throw new Error("Already connected, pending or blocked");
+      return { ok: true };
+    }
+    if (["accept", "decline", "block"].includes(data.action)) {
+      const { data: f } = await supabase
+        .from("friendships")
+        .select()
+        .eq("id", data.value ?? "")
+        .single();
+      if (!f || f.status === "blocked" || (data.action !== "block" && f.receiver_id !== userId))
+        throw new Error("Request cannot be changed");
+      const { error } = await admin
+        .from("friendships")
+        .update({
+          status:
+            data.action === "accept"
+              ? "accepted"
+              : data.action === "block"
+                ? "blocked"
+                : "declined",
+        })
+        .eq("id", f.id);
+      if (error) throw error;
+      return { ok: true };
+    }
+    const { data: friends, error } = await supabase.from("friendships").select("*");
+    if (error) throw error;
+    const ids = (friends ?? []).map((f) => (f.sender_id === userId ? f.receiver_id : f.sender_id));
+    const { data: people } = await admin
+      .from("profiles")
+      .select("id,display_name,username")
+      .in("id", ids);
+    return {
+      friends: (friends ?? []).map((f) => ({
+        ...f,
+        person: people?.find(
+          (p) => p.id === (f.sender_id === userId ? f.receiver_id : f.sender_id),
+        ),
+      })),
+    };
+  });

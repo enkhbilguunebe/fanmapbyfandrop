@@ -1,9 +1,180 @@
-import { create } from 'zustand';import {persist} from 'zustand/middleware';import {toast} from 'sonner';import {supabase} from '@/integrations/supabase/client';import {LEVELS,type Letter,type Reel} from './demo-data';
-export type Role='visitor'|'fan'|'returning'|'artist';export type MapStyle='default'|'satellite'|'fanmap';export type Message={id:string;thread:string;from:'me'|'them'|'artist';text:string;at:string;mediaPath?:string;mediaType?:string};
-async function reload(){const {syncCloud}=await import('./cloud-sync');await syncCloud();}
-async function mutation(task:()=>PromiseLike<{error:unknown}>){const {error}=await task();if(error){toast.error(typeof error==='object'&&error&&'message' in error?String(error.message):'Unable to save');return;}await reload();}
-async function userId(){const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Sign in first');return user.id;}
-type State={role:Role;tickets:string[];stamps:{concertId:string;at:string;id:string}[];predictions:Record<string,Record<string,string>>;locked:Record<string,boolean>;letters:Letter[];likedLetters:string[];reels:Reel[];votes:Record<string,string>;messages:Message[];mapStyle:MapStyle;camera:{lng:number;lat:number;zoom:number}|null;audit:{at:string;event:string}[];setRole:(r:Role)=>void;setMapStyle:(s:MapStyle)=>void;verifyTicket:(code:string)=>Promise<string|null>;checkIn:(code:string)=>Promise<string|null>;setPrediction:(cid:string,q:string,a:string)=>void;lockPredictions:(cid:string)=>void;addLetter:(cid:string,text:string,showCount:boolean)=>void;deleteLetter:(id:string)=>void;toggleLike:(id:string)=>void;featureLetter:(id:string)=>void;replyLetter:(id:string,text:string)=>void;submitReel:(cid:string,poster:string,caption:string)=>void;moderateReel:(id:string)=>void;vote:(cid:string,rid:string)=>void;sendMessage:(thread:string,text:string,from?:Message['from'])=>void};
-async function verify(code:string,checkin:boolean){const {error}=await supabase.rpc('fanmap_verify',{code,checkin});if(error)return error.message;await reload();return null;}
-export const useApp=create<State>()(persist((set,get)=>({role:'visitor',tickets:[],stamps:[],predictions:{},locked:{},letters:[],likedLetters:[],reels:[],votes:{},messages:[],mapStyle:'fanmap',camera:null,audit:[],setRole:()=>{},setMapStyle:mapStyle=>set({mapStyle}),verifyTicket:code=>verify(code,false),checkIn:code=>verify(code,true),setPrediction:(cid,q,a)=>{if(get().locked[cid])return;const answers={...get().predictions[cid],[q]:a};void userId().then(user_id=>mutation(()=>supabase.from('predictions').upsert({user_id,event_id:cid,answers,locked:false})));},lockPredictions:cid=>{void userId().then(user_id=>mutation(()=>supabase.from('predictions').update({locked:true}).eq('user_id',user_id).eq('event_id',cid)));},addLetter:(cid,text,showCount)=>{void userId().then(user_id=>mutation(()=>supabase.from('letters').insert({user_id,event_id:cid,text,show_count:showCount})));},deleteLetter:id=>{void mutation(()=>supabase.from('letters').delete().eq('id',id));},toggleLike:id=>{void userId().then(user_id=>mutation(()=>get().likedLetters.includes(id)?supabase.from('letter_likes').delete().eq('letter_id',id).eq('user_id',user_id):supabase.from('letter_likes').insert({user_id,letter_id:id})));},featureLetter:id=>{void mutation(()=>supabase.rpc('fanmap_edit_letter',{l:id,feature:!get().letters.find(l=>l.id===id)?.featured}));},replyLetter:(id,text)=>{void mutation(()=>supabase.rpc('fanmap_edit_letter',{l:id,reply:text}));},submitReel:()=>{},moderateReel:id=>{void mutation(()=>supabase.rpc('fanmap_moderate',{r:id,s:'approved'}));},vote:(cid,rid)=>{void userId().then(user_id=>mutation(()=>supabase.from('reel_votes').insert({user_id,event_id:cid,reel_id:rid})));},sendMessage:()=>{toast.error('Open an accepted friend conversation to send a message.');}}),{name:'fanmap-presentation-v2',skipHydration:true,partialize:s=>({mapStyle:s.mapStyle,camera:s.camera})}));
-export function levelFor(count:number){let level=LEVELS[0];if(!level)throw new Error('Missing levels');for(const l of LEVELS)if(count>=l.min)level=l;const next=LEVELS.find(l=>l.min>count);return {level,next,progress:next?Math.max(0,Math.min(1,(count-level.min)/(next.min-level.min))):1};}
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { LEVELS, type Letter, type Reel } from "./demo-data";
+export type Role = "visitor" | "fan" | "returning" | "artist";
+export type MapStyle = "default" | "satellite" | "fanmap";
+export type Message = {
+  id: string;
+  thread: string;
+  from: "me" | "them" | "artist";
+  text: string;
+  at: string;
+  mediaPath?: string | undefined;
+  mediaType?: string | undefined;
+};
+async function reload() {
+  const { syncCloud } = await import("./cloud-sync");
+  await syncCloud();
+}
+async function mutation(task: () => PromiseLike<{ error: unknown }>) {
+  const { error } = await task();
+  if (error) {
+    toast.error(
+      typeof error === "object" && error && "message" in error
+        ? String(error.message)
+        : "Unable to save",
+    );
+    return;
+  }
+  await reload();
+}
+async function userId() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in first");
+  return user.id;
+}
+type State = {
+  role: Role;
+  tickets: string[];
+  stamps: { concertId: string; at: string; id: string }[];
+  predictions: Record<string, Record<string, string>>;
+  locked: Record<string, boolean>;
+  letters: Letter[];
+  likedLetters: string[];
+  reels: Reel[];
+  votes: Record<string, string>;
+  messages: Message[];
+  mapStyle: MapStyle;
+  camera: { lng: number; lat: number; zoom: number } | null;
+  audit: { at: string; event: string }[];
+  setRole: (r: Role) => void;
+  setMapStyle: (s: MapStyle) => void;
+  verifyTicket: (code: string) => Promise<string | null>;
+  checkIn: (code: string) => Promise<string | null>;
+  setPrediction: (cid: string, q: string, a: string) => void;
+  lockPredictions: (cid: string) => void;
+  addLetter: (cid: string, text: string, showCount: boolean) => void;
+  deleteLetter: (id: string) => void;
+  toggleLike: (id: string) => void;
+  featureLetter: (id: string) => void;
+  replyLetter: (id: string, text: string) => void;
+  submitReel: (cid: string, poster: string, caption: string) => void;
+  moderateReel: (id: string) => void;
+  vote: (cid: string, rid: string) => void;
+  sendMessage: (thread: string, text: string, from?: Message["from"]) => void;
+};
+async function verify(code: string, checkin: boolean) {
+  const { error } = await supabase.rpc("fanmap_verify", { code, checkin });
+  if (error) return error.message;
+  await reload();
+  return null;
+}
+export const useApp = create<State>()(
+  persist(
+    (set, get) => ({
+      role: "visitor",
+      tickets: [],
+      stamps: [],
+      predictions: {},
+      locked: {},
+      letters: [],
+      likedLetters: [],
+      reels: [],
+      votes: {},
+      messages: [],
+      mapStyle: "fanmap",
+      camera: null,
+      audit: [],
+      setRole: () => {},
+      setMapStyle: (mapStyle) => set({ mapStyle }),
+      verifyTicket: (code) => verify(code, false),
+      checkIn: (code) => verify(code, true),
+      setPrediction: (cid, q, a) => {
+        if (get().locked[cid]) return;
+        const answers = { ...get().predictions[cid], [q]: a };
+        void userId().then((user_id) =>
+          mutation(() =>
+            supabase.from("predictions").upsert({ user_id, event_id: cid, answers, locked: false }),
+          ),
+        );
+      },
+      lockPredictions: (cid) => {
+        void userId().then((user_id) =>
+          mutation(() =>
+            supabase
+              .from("predictions")
+              .update({ locked: true })
+              .eq("user_id", user_id)
+              .eq("event_id", cid),
+          ),
+        );
+      },
+      addLetter: (cid, text, showCount) => {
+        void userId().then((user_id) =>
+          mutation(() =>
+            supabase
+              .from("letters")
+              .insert({ user_id, event_id: cid, text, show_count: showCount }),
+          ),
+        );
+      },
+      deleteLetter: (id) => {
+        void mutation(() => supabase.from("letters").delete().eq("id", id));
+      },
+      toggleLike: (id) => {
+        void userId().then((user_id) =>
+          mutation(() =>
+            get().likedLetters.includes(id)
+              ? supabase.from("letter_likes").delete().eq("letter_id", id).eq("user_id", user_id)
+              : supabase.from("letter_likes").insert({ user_id, letter_id: id }),
+          ),
+        );
+      },
+      featureLetter: (id) => {
+        void mutation(() =>
+          supabase.rpc("fanmap_edit_letter", {
+            l: id,
+            feature: !get().letters.find((l) => l.id === id)?.featured,
+          }),
+        );
+      },
+      replyLetter: (id, text) => {
+        void mutation(() => supabase.rpc("fanmap_edit_letter", { l: id, reply: text }));
+      },
+      submitReel: () => {},
+      moderateReel: (id) => {
+        void mutation(() => supabase.rpc("fanmap_moderate", { r: id, s: "approved" }));
+      },
+      vote: (cid, rid) => {
+        void userId().then((user_id) =>
+          mutation(() =>
+            supabase.from("reel_votes").insert({ user_id, event_id: cid, reel_id: rid }),
+          ),
+        );
+      },
+      sendMessage: () => {
+        toast.error("Open an accepted friend conversation to send a message.");
+      },
+    }),
+    {
+      name: "fanmap-presentation-v2",
+      skipHydration: true,
+      partialize: (s) => ({ mapStyle: s.mapStyle, camera: s.camera }),
+    },
+  ),
+);
+export function levelFor(count: number) {
+  let level = LEVELS[0];
+  if (!level) throw new Error("Missing levels");
+  for (const l of LEVELS) if (count >= l.min) level = l;
+  const next = LEVELS.find((l) => l.min > count);
+  return {
+    level,
+    next,
+    progress: next ? Math.max(0, Math.min(1, (count - level.min) / (next.min - level.min))) : 1,
+  };
+}
