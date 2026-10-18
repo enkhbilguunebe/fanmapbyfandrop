@@ -103,7 +103,7 @@ function Artist() {
             ← Back to fan app
           </Link>
         </aside>
-        <main className="flex-1 p-6 md:p-10">
+        <main className="min-w-0 flex-1 p-6 md:p-10">
           <div className="mb-6 flex gap-2 overflow-x-auto md:hidden">
             {SECTIONS.map((s) => (
               <button
