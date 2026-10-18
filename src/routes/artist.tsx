@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, useMemo } from "react";
+import { ClientOnly } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { artistAudience, sendAnnouncement } from "@/lib/fanmap.functions";
 import { useAccount } from "@/lib/account";
@@ -35,7 +36,10 @@ export const Route = createFileRoute("/artist")({
   component: Artist,
 });
 
-const SECTIONS = ["Overview", "Fans", "Messaging", "Letters", "Reels"] as const;
+const SECTIONS = ["Overview", "Tour map", "Fans", "Messaging", "Letters", "Reels"] as const;
+const ArtistTourMap = lazy(() => import("@/components/ArtistTourMap"));
+// Fictional demo attendance per show (labeled in UI)
+const DEMO_ATTENDED: Record<string, number> = { "c-toronto": 214, "c-montreal": 1840, "c-nyc": 3125, "c-pittsburgh": 962 };
 
 function Artist() {
   const { account, user } = useAccount();
@@ -62,6 +66,7 @@ function Artist() {
   const replyLetter = (id: string, text: string) => id.startsWith("demo-") ? demo.patchLetter(id, { artistReply: text }) : useApp.getState().replyLetter(id, text);
   const [letterSort, setLetterSort] = useState<"liked" | "new">("liked");
   const novaConcerts = CONCERTS.filter((c) => c.artistId === "nova");
+  const tourStops = useMemo(() => novaConcerts.map((c) => ({ concert: c, attended: concertStatus(c) === "upcoming" ? 0 : (DEMO_ATTENDED[c.id] ?? 0) })), []);
   const segment = audience.filter((f) => f.count >= min && f.optIn);
   const novaLetters = letters.filter((l) => novaConcerts.some((c) => c.id === l.concertId));
 
@@ -148,6 +153,33 @@ function Artist() {
                 ))}
               </div>
             </>
+          )}
+
+          {sec === "Tour map" && (
+            <div className="mt-6">
+              <p className="text-xs text-gold">Fictional demo attendance numbers.</p>
+              <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-primary" />Past show · fans attended</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-gold" />Today</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full border-2 border-dashed border-primary" />Upcoming</span>
+              </div>
+              <div className="relative mt-3 h-[420px] overflow-hidden rounded-2xl border border-border bg-card">
+                <ClientOnly fallback={null}>
+                  <Suspense fallback={null}><ArtistTourMap stops={tourStops} /></Suspense>
+                </ClientOnly>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {tourStops.map(({ concert: c, attended }) => {
+                  const st = concertStatus(c);
+                  return (
+                    <div key={c.id} className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-sm">
+                      <div><p className="font-medium">{c.city}</p><p className="text-xs text-muted-foreground">{c.venue} · {new Date(c.date).toLocaleDateString()}</p></div>
+                      <span className={cn("text-sm font-semibold", st === "upcoming" ? "text-muted-foreground" : "text-primary")}>{st === "upcoming" ? "Upcoming" : `${attended.toLocaleString()} fans`}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {sec === "Fans" && (
