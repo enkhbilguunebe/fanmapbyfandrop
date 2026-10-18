@@ -89,7 +89,7 @@ function Locked() {
   );
 }
 
-function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?: string; hasTicket: boolean }) {
+function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?: string | undefined; hasTicket: boolean }) {
   const verifyTicket = useApp((s) => s.verifyTicket);
   const checkIn = useApp((s) => s.checkIn);
   const role = useApp((s) => s.role);
@@ -155,12 +155,12 @@ function Reels({ concert }: { concert: Concert }) {
 
   const onFile = (f?: File) => {
     if (!f) return;
-    if (!f.type.startsWith("video/")) return toast.error("Please choose a video file.");
+    if (!f.type.startsWith("video/")) { toast.error("Please choose a video file."); return; }
     const url = URL.createObjectURL(f);
     const v = document.createElement("video");
     v.preload = "metadata";
     v.onloadedmetadata = () => {
-      if (v.duration > 10.5) return toast.error("Reels must be 10 seconds or less.");
+      if (v.duration > 10.5) { toast.error("Reels must be 10 seconds or less."); return; }
       submit(concert.id, concert.cover, f.name.replace(/\.[^.]+$/, ""));
       toast.success("Submitted. Your reel is in the moderation queue.");
     };
