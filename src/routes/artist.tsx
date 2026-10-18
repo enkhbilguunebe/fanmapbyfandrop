@@ -146,7 +146,7 @@ function Artist() {
                   <div key={l} className="min-w-0 rounded-2xl border border-border bg-card p-4 md:p-5">
                     <p className="text-xs text-muted-foreground">{l}</p>
                     <p className="mt-2 break-words text-2xl font-semibold md:text-3xl">{v}</p>
-                    {sub && <p className="mt-1 text-xs text-primary">{sub}</p>}>
+                    {sub && <p className="mt-1 text-xs text-primary">{sub}</p>}
                   </div>
                 ))}
               </div>
