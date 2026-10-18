@@ -79,7 +79,7 @@ export const locationAction = createServerFn({ method: "POST" })
       throw new Error("Sharing is stopped or expired");
     const { error } = await admin.rpc("fanmap_location_write", {
       sid: s.id, uid: userId, act: data.action,
-      latitude: data.lat ?? null, longitude: data.lng ?? null, precision_m: data.accuracy ?? null,
+      ...(data.lat !== undefined ? { latitude: data.lat } : {}), ...(data.lng !== undefined ? { longitude: data.lng } : {}), ...(data.accuracy !== undefined ? { precision_m: data.accuracy } : {}),
     });
     if (error) throw new Error("Sharing stopped or permission denied");
     return { ok: true };
