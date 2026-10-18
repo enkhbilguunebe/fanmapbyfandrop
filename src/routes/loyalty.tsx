@@ -142,14 +142,22 @@ function Loyalty() {
             ["Superfan", 7],
             ["Tour Legend", 12],
           ].map(([label, n]) => (
-            <div key={label} className="rounded-lg border border-border p-3 text-center">
-              <Award
-                className={
-                  attended.length >= Number(n)
-                    ? "mx-auto text-gold"
-                    : "mx-auto text-muted-foreground"
-                }
-              />
+            <div
+              key={label}
+              className={
+                attended.length >= Number(n)
+                  ? "rounded-lg border border-gold/30 bg-card p-3 text-center"
+                  : "rounded-lg border border-border bg-card/60 p-3 text-center"
+              }
+            >
+              <div className="relative mx-auto grid h-10 w-10 place-items-center">
+                <Award
+                  className={
+                    attended.length >= Number(n)
+                      ? "text-gold"
+                      : "text-muted-foreground/40"
+                  }
+                />
               <p className="mt-2 text-xs">{label}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 {attended.length >= Number(n) ? "Unlocked" : `${n} concerts`}
