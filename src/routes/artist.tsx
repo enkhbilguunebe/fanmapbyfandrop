@@ -1,5 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { artistAudience, sendAnnouncement } from "@/lib/fanmap.functions";
+import { useAccount } from "@/lib/account";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthGate, TopBar } from "@/components/AppShell";
 import { toast } from "sonner";
 import { BadgeCheck, Star } from "lucide-react";
 import { CONCERTS, CRM_FANS, concertStatus } from "@/lib/demo-data";
@@ -13,6 +18,8 @@ export const Route = createFileRoute("/artist")({
     meta: [
       { title: "Artist Command Center — FanMap" },
       { name: "description", content: "Understand your verified audience, moderate fan activities and message loyal fans." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Artist Command Center — FanMap" },
       { property: "og:description", content: "Verified audience insights and loyalty CRM for artists." },
     ],
@@ -23,19 +30,27 @@ export const Route = createFileRoute("/artist")({
 const SECTIONS = ["Overview", "Fans", "Messaging", "Letters", "Reels"] as const;
 
 function Artist() {
+  const {account,user}=useAccount();
+  const fetchAudience=useServerFn(artistAudience);
+  const announce=useServerFn(sendAnnouncement);
+  const [audience,setAudience]=useState<{id:string;name:string;count:number;optIn:boolean}[]>([]);
+  const [attachment,setAttachment]=useState<File|null>(null);
+  const [sending,setSending]=useState(false);
+  useEffect(()=>{if(account?.role?.role=== "artist")void fetchAudience().then(setAudience).catch(e=>toast.error(e.message));},[account?.role?.role]);
   const [sec, setSec] = useState<(typeof SECTIONS)[number]>("Overview");
   const [min, setMin] = useState(1);
   const [msg, setMsg] = useState("");
   const { letters, reels, featureLetter, replyLetter, moderateReel, sendMessage } = useApp();
   const novaConcerts = CONCERTS.filter((c) => c.artistId === "nova");
-  const segment = CRM_FANS.filter((f) => f.nova >= min && f.optIn);
+  const segment = audience.filter((f) => f.count >= min && f.optIn);
   const novaLetters = letters.filter((l) => novaConcerts.some((c) => c.id === l.concertId));
 
+  if(account && account.role?.role!=="artist")return <AuthGate><main className="p-10"><h1>Artist permission required</h1><Link to="/">Back to FanMap</Link></main></AuthGate>;
   return (
-    <div className="flex min-h-screen">
+    <AuthGate><div className="flex min-h-screen">
       <aside className="hidden w-56 shrink-0 border-r border-border bg-secondary p-5 md:block">
         <p className="text-lg font-semibold">FanMap</p>
-        <p className="text-xs text-muted-foreground">Nova Lane · Demo artist</p>
+        <p className="text-xs text-muted-foreground">Jasper Vale · Demo artist</p>
         <nav className="mt-8 space-y-1">
           {SECTIONS.map((s) => <button key={s} onClick={() => setSec(s)} className={cn("block w-full rounded-lg px-3 py-2 text-left text-sm", sec === s ? "bg-card text-foreground" : "text-muted-foreground")}>{s}</button>)}
         </nav>
@@ -45,13 +60,13 @@ function Artist() {
         <div className="mb-6 flex gap-2 overflow-x-auto md:hidden">
           {SECTIONS.map((s) => <button key={s} onClick={() => setSec(s)} className={cn("rounded-full px-3 py-1 text-sm", sec === s ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{s}</button>)}
         </div>
-        <p className="text-xs uppercase tracking-wider text-gold">Demo data</p>
+        <TopBar/><p className="mt-5 text-xs uppercase tracking-wider text-gold">Demo artist · Jasper Vale</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{sec}</h1>
 
         {sec === "Overview" && (
           <>
             <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {[["Verified fans", CRM_FANS.length], ["Repeat attendees", CRM_FANS.filter((f) => f.nova > 1).length], ["Opted in", CRM_FANS.filter((f) => f.optIn).length], ["Letters", novaLetters.length]].map(([l, v]) => (
+              {[["Verified fans", audience.length], ["Repeat attendees", audience.filter((f) => f.count > 1).length], ["Opted in", audience.filter((f) => f.optIn).length], ["Letters", novaLetters.length]].map(([l, v]) => (
                 <div key={l as string} className="rounded-2xl border border-border bg-card p-5"><p className="text-xs text-muted-foreground">{l}</p><p className="mt-2 text-3xl font-semibold">{v}</p></div>
               ))}
             </div>
@@ -65,8 +80,8 @@ function Artist() {
         {sec === "Fans" && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground"><tr><th className="p-4">Fan</th><th>City</th><th>Nova Lane shows</th><th>Opt-in</th></tr></thead>
-              <tbody>{[...CRM_FANS].sort((a, b) => b.nova - a.nova).map((f) => <tr key={f.name} className="border-t border-border"><td className="flex items-center gap-1 p-4">{f.name}<BadgeCheck className="h-3.5 w-3.5 text-primary" /></td><td>{f.city}</td><td className="text-primary">{f.nova}×</td><td className="text-muted-foreground">{f.optIn ? "Yes" : "No"}</td></tr>)}</tbody>
+              <thead className="text-left text-xs text-muted-foreground"><tr><th className="p-4">Fan</th><th>City</th><th>Jasper Vale shows</th><th>Opt-in</th></tr></thead>
+              <tbody>{[...audience].sort((a, b) => b.count - a.count).map((f) => <tr key={f.name} className="border-t border-border"><td className="flex items-center gap-1 p-4">{f.name}<BadgeCheck className="h-3.5 w-3.5 text-primary" /></td><td>—</td><td className="text-primary">{f.count}×</td><td className="text-muted-foreground">{f.optIn ? "Yes" : "No"}</td></tr>)}</tbody>
             </table>
           </div>
         )}
@@ -78,7 +93,8 @@ function Artist() {
             </div>
             <p className="text-sm text-muted-foreground">{segment.length} opted-in fans match: {segment.map((f) => f.name).join(", ") || "—"}</p>
             <Textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Write a message to this segment" className="bg-card" />
-            <Button disabled={!msg.trim() || !segment.length} onClick={() => { sendMessage("artist-nova", msg.trim(), "artist"); setMsg(""); toast.success(`Sent to ${segment.length} fans.`); }}>Send to segment</Button>
+            <label className="block text-xs text-muted-foreground">Exclusive audio or video<input aria-label="Exclusive media" type="file" accept="audio/*,video/*" className="mt-2 block w-full" onChange={e=>setAttachment(e.target.files?.[0]??null)}/></label>
+            <Button disabled={sending||!msg.trim() || !segment.length} onClick={async()=>{if(!user)return;setSending(true);try{let path:string|null=null;if(attachment){path=user.id+"/exclusive/"+crypto.randomUUID()+"-"+attachment.name;const {error}=await supabase.storage.from("fanmap-media").upload(path,attachment);if(error)throw error;}const result=await announce({data:{text:msg,min,path,type:attachment?.type??null}});toast.success(`Sent to ${result.count} eligible opted-in fans.`);setMsg("");setAttachment(null);}catch(e){toast.error(e instanceof Error?e.message:"Unable to send")}finally{setSending(false)}}}>{sending?"Sending…":"Send to segment"}</Button>
           </div>
         )}
 
@@ -92,7 +108,7 @@ function Artist() {
                 {l.artistReply && <p className="mt-2 text-sm text-primary">{l.artistReply}</p>}
                 <div className="mt-3 flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => featureLetter(l.id)}><Star className="h-3.5 w-3.5" />{l.featured ? "Unfeature" : "Feature"}</Button>
-                  <Button size="sm" variant="secondary" onClick={() => { const t = prompt("Reply as Nova Lane"); if (t) replyLetter(l.id, t); }}>Reply</Button>
+                  <Button size="sm" variant="secondary" onClick={() => { const t = prompt("Reply as Jasper Vale"); if (t) replyLetter(l.id, t); }}>Reply</Button>
                 </div>
               </div>
             ))}
@@ -112,6 +128,6 @@ function Artist() {
           </div>
         )}
       </main>
-    </div>
+    </div></AuthGate>
   );
 }

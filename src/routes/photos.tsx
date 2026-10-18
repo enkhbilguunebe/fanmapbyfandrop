@@ -9,6 +9,8 @@ export const Route = createFileRoute("/photos")({
     meta: [
       { title: "Photos — FanMap" },
       { name: "description", content: "Your concert memories, grouped by show." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Photos — FanMap" },
       { property: "og:description", content: "Your concert memories, grouped by show." },
     ],

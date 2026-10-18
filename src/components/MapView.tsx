@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -17,7 +17,10 @@ const STYLES: Record<MapStyle, StyleSpecification | string> = {
   fanmap: "https://tiles.openfreemap.org/styles/dark",
 };
 
-export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: [number, number] | null }) {
+function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) => void; flyTo?: [number, number] | null }) {
+  const latestSelect=useRef(onSelect);
+  latestSelect.current=onSelect;
+  const activeStyle=useRef(useApp.getState().mapStyle);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -27,23 +30,28 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
 
   useEffect(() => {
     if (!el.current) return;
-    const m = new maplibregl.Map({ container: el.current, style: STYLES[useApp.getState().mapStyle], center: [-76.5, 42.8], zoom: 4.6, attributionControl: { compact: true } });
+    const camera=useApp.getState().camera;
+    const m = new maplibregl.Map({ container: el.current, style: STYLES[useApp.getState().mapStyle], center: camera?[camera.lng,camera.lat]:[-76.5, 42.8], zoom: camera?.zoom??4.6, attributionControl: { compact: true } });
     m.addControl(new maplibregl.NavigationControl({ showZoom: false }), "bottom-right");
     m.addControl(new maplibregl.GeolocateControl({ trackUserLocation: false }), "bottom-right");
     map.current = m;
     const render = () => drawMarkers();
     m.on("zoomend", render);
-    return () => m.remove();
+    const saveCamera=()=>{const c=m.getCenter();useApp.setState({camera:{lng:c.lng,lat:c.lat,zoom:m.getZoom()}})};
+    m.on("moveend",saveCamera);
+    return () => { saveCamera();m.off("moveend",saveCamera);m.off("zoomend",render);markers.current.forEach(x=>x.remove());markers.current=[];map.current=null;m.remove(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // style switch keeps camera + markers (markers are DOM overlays)
   useEffect(() => {
+    if(activeStyle.current===style)return;
+    activeStyle.current=style;
     map.current?.setStyle(STYLES[style]);
   }, [style]);
 
   useEffect(() => {
-    if (flyTo) map.current?.flyTo({ center: flyTo, zoom: 13, speed: 1.4 });
+    if (flyTo) map.current?.flyTo({ center: flyTo, zoom: 13, speed: 1.4, essential: false });
   }, [flyTo]);
 
   function drawMarkers() {
@@ -69,18 +77,20 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
       if (g.items.length > 1) {
         div.className = "fm-cluster";
         div.textContent = String(g.items.length);
-        const c = g.items[0]!;
+        const c = g.items[0];
+        if(!c)return;
         div.onclick = () => m.flyTo({ center: [c.lng, c.lat], zoom: m.getZoom() + 2 });
         markers.current.push(new maplibregl.Marker({ element: div }).setLngLat([c.lng, c.lat]).addTo(m));
       } else {
-        const c = g.items[0]!;
+        const c = g.items[0];
+        if(!c)return;
         const st = concertStatus(c);
         const attended = stamps.some((s) => s.concertId === c.id);
         div.className = "fm-marker " + (st === "today" ? "today" : attended || st === "past" ? "past" : "upcoming");
         div.setAttribute("aria-label", c.venue);
         div.onclick = (e) => {
           e.stopPropagation();
-          onSelect(c);
+          latestSelect.current(c);
         };
         markers.current.push(new maplibregl.Marker({ element: div }).setLngLat([c.lng, c.lat]).addTo(m));
       }
@@ -92,8 +102,11 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
     if (!m) return;
     if (m.loaded()) drawMarkers();
     else m.once("load", drawMarkers);
+    return()=>{m.off("load",drawMarkers);};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stamps, tickets]);
 
   return <div className="absolute inset-0"><div ref={el} className="h-full w-full" /></div>;
 }
+
+export default memo(MapView);
