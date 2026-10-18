@@ -12,6 +12,7 @@ import { useApp } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { usePresentationDemo } from "@/lib/presentation-demo";
 
 export const Route = createFileRoute("/artist")({
   head: () => ({
@@ -54,7 +55,12 @@ function Artist() {
   const [sec, setSec] = useState<(typeof SECTIONS)[number]>("Overview");
   const [min, setMin] = useState(1);
   const [msg, setMsg] = useState("");
-  const { letters, reels, featureLetter, replyLetter, moderateReel, sendMessage } = useApp();
+  const { letters: savedLetters, reels, moderateReel, sendMessage } = useApp();
+  const demo = usePresentationDemo();
+  const letters = [...savedLetters, ...(account?.profile.is_demo ? demo.letters : [])];
+  const featureLetter = (id: string) => id.startsWith("demo-") ? demo.patchLetter(id, { featured: !demo.letters.find(l => l.id === id)?.featured }) : useApp.getState().featureLetter(id);
+  const replyLetter = (id: string, text: string) => id.startsWith("demo-") ? demo.patchLetter(id, { artistReply: text }) : useApp.getState().replyLetter(id, text);
+  const [letterSort, setLetterSort] = useState<"liked" | "new">("liked");
   const novaConcerts = CONCERTS.filter((c) => c.artistId === "nova");
   const segment = audience.filter((f) => f.count >= min && f.optIn);
   const novaLetters = letters.filter((l) => novaConcerts.some((c) => c.id === l.concertId));
@@ -249,8 +255,10 @@ function Artist() {
               <p className="text-sm text-muted-foreground">
                 Popularity helps discovery, but likes never auto-award prizes.
               </p>
+              {account?.profile.is_demo && <p className="text-xs text-gold">Fictional demo letters and sample likes · Demo replies stay in this session.</p>}
+              <div className="flex gap-2"><Button size="sm" variant={letterSort === "liked" ? "default" : "secondary"} onClick={() => setLetterSort("liked")}>Most liked</Button><Button size="sm" variant={letterSort === "new" ? "default" : "secondary"} onClick={() => setLetterSort("new")}>Newest</Button></div>
               {[...novaLetters]
-                .sort((a, b) => b.likes - a.likes)
+                .sort((a, b) => letterSort === "liked" ? b.likes - a.likes : b.createdAt.localeCompare(a.createdAt))
                 .map((l) => (
                   <div key={l.id} className="rounded-2xl border border-border bg-card p-5">
                     <div className="flex justify-between text-sm">

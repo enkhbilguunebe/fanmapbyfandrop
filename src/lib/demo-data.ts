@@ -1,6 +1,10 @@
 import c1 from "@/assets/c1.jpg";
 import c2 from "@/assets/c2.jpg";
 import c3 from "@/assets/c3.jpg";
+import harbor from "@/assets/harbor.jpg";
+import mira from "@/assets/mira.jpg";
+import june from "@/assets/june.jpg";
+import atlas from "@/assets/atlas.jpg";
 
 // DEMO DATA — fictional artists and fans. Not real ticketing or attendance data.
 
@@ -23,6 +27,8 @@ export const ARTISTS: Artist[] = [
   { id: "nova", name: "Jasper Vale", genre: "Alt-pop" },
   { id: "harbor", name: "The Harbor Lights", genre: "Indie rock" },
   { id: "mira", name: "Mira Sol", genre: "Soul" },
+  { id: "june", name: "June Park", genre: "Indie folk" },
+  { id: "atlas", name: "Atlas Reed", genre: "Electronic" },
 ];
 
 const today = new Date("2026-10-18T12:00:00Z");
@@ -37,12 +43,12 @@ export const CONCERTS: Concert[] = [
   { id: "c-toronto", artistId: "nova", tour: "Afterglow Tour", venue: "Scotiabank Arena", city: "Toronto", lng: -79.3791, lat: 43.6435, date: d(0), cover: c1, ticketCode: "DEMO-TOR-001", checkinCode: "VENUE-TOR-QR" },
   { id: "c-montreal", artistId: "nova", tour: "Afterglow Tour", venue: "Bell Centre", city: "Montreal", lng: -73.5693, lat: 45.4961, date: d(-40), cover: c2, ticketCode: "DEMO-MTL-001", checkinCode: "VENUE-MTL-QR" },
   { id: "c-nyc", artistId: "nova", tour: "Afterglow Tour", venue: "Madison Square Garden", city: "New York", lng: -73.9934, lat: 40.7505, date: d(-120), cover: c1, ticketCode: "DEMO-NYC-001", checkinCode: "VENUE-NYC-QR" },
-  { id: "c-chicago", artistId: "harbor", tour: "Low Tide", venue: "United Center", city: "Chicago", lng: -87.6742, lat: 41.8807, date: d(-200), cover: c2, ticketCode: "DEMO-CHI-001", checkinCode: "VENUE-CHI-QR" },
-  { id: "c-boston", artistId: "mira", tour: "Golden Hour", venue: "House of Blues", city: "Boston", lng: -71.0955, lat: 42.3473, date: d(-90), cover: c3, ticketCode: "DEMO-BOS-001", checkinCode: "VENUE-BOS-QR" },
+  { id: "c-chicago", artistId: "harbor", tour: "Low Tide", venue: "United Center", city: "Chicago", lng: -87.6742, lat: 41.8807, date: d(-200), cover: harbor, ticketCode: "DEMO-CHI-001", checkinCode: "VENUE-CHI-QR" },
+  { id: "c-boston", artistId: "mira", tour: "Golden Hour", venue: "House of Blues", city: "Boston", lng: -71.0955, lat: 42.3473, date: d(-90), cover: mira, ticketCode: "DEMO-BOS-001", checkinCode: "VENUE-BOS-QR" },
   { id: "c-ottawa", artistId: "nova", tour: "Afterglow Tour", venue: "Canadian Tire Centre", city: "Ottawa", lng: -75.927, lat: 45.2969, date: d(14), cover: c3, ticketCode: "DEMO-OTT-001", checkinCode: "VENUE-OTT-QR" },
-  { id: "c-philly", artistId: "harbor", tour: "Low Tide", venue: "The Fillmore", city: "Philadelphia", lng: -75.1335, lat: 39.9659, date: d(30), cover: c1, ticketCode: "DEMO-PHL-001", checkinCode: "VENUE-PHL-QR" },
-  { id: "c-detroit", artistId: "nova", tour: "Afterglow Tour", venue: "Fox Theatre", city: "Detroit", lng: -83.0528, lat: 42.3385, date: d(-150), cover: c1, ticketCode: "DEMO-DET-001", checkinCode: "VENUE-DET-QR" },
-  { id: "c-cleveland", artistId: "nova", tour: "Afterglow Tour", venue: "Rocket Arena", city: "Cleveland", lng: -81.688, lat: 41.496, date: d(-180), cover: c2, ticketCode: "DEMO-CLE-001", checkinCode: "VENUE-CLE-QR" },
+  { id: "c-philly", artistId: "harbor", tour: "Low Tide", venue: "The Fillmore", city: "Philadelphia", lng: -75.1335, lat: 39.9659, date: d(30), cover: harbor, ticketCode: "DEMO-PHL-001", checkinCode: "VENUE-PHL-QR" },
+  { id: "c-detroit", artistId: "june", tour: "Wildflower", venue: "Fox Theatre", city: "Detroit", lng: -83.0528, lat: 42.3385, date: d(-150), cover: june, ticketCode: "DEMO-DET-001", checkinCode: "VENUE-DET-QR" },
+  { id: "c-cleveland", artistId: "atlas", tour: "Daybreak", venue: "Rocket Arena", city: "Cleveland", lng: -81.688, lat: 41.496, date: d(-180), cover: atlas, ticketCode: "DEMO-CLE-001", checkinCode: "VENUE-CLE-QR" },
   { id: "c-pittsburgh", artistId: "nova", tour: "Afterglow Tour", venue: "PPG Paints Arena", city: "Pittsburgh", lng: -79.989, lat: 40.439, date: d(-210), cover: c3, ticketCode: "DEMO-PIT-001", checkinCode: "VENUE-PIT-QR" },
 ];
 

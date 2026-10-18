@@ -16,3 +16,5 @@
 - Friend transitions and location writes use locked SQL functions; session expiry is enforced in read policies and physical coordinate cleanup runs each minute to prevent races and retention.
 - Store AI guide conversations per account and concert, use a server-validated streaming endpoint and retain the model's verified-information limitations.
 - Friend map overlays read only RLS-scoped active sessions and positions, react to session changes and clear at the server expiry to prevent displaying ended sharing.
+- Judges' presentation fixtures stay in a separate in-memory demo module and are rendered only for labeled demo accounts; they never grant Cloud eligibility or artist permissions.
+- The presentation Find friends panel uses only fictional coordinates and a public demo password, never geolocation or account reauthentication; the real location implementation remains separate.

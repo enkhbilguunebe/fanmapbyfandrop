@@ -5,6 +5,8 @@ import { ARTISTS, CONCERTS, LEVELS } from "@/lib/demo-data";
 import { useAccount } from "@/lib/account";
 import { Progress } from "@/components/ui/progress";
 import { levelFor, useApp } from "@/lib/store";
+import passport from "@/assets/fanmap-passport.png.asset.json";
+import { DEMO_ATTENDANCE } from "@/lib/presentation-demo";
 
 export const Route = createFileRoute("/loyalty")({
   head: () => ({
@@ -28,7 +30,10 @@ export const Route = createFileRoute("/loyalty")({
 
 function Loyalty() {
   const { account } = useAccount();
-  const stamps = useApp((s) => s.stamps);
+  const savedStamps = useApp((s) => s.stamps);
+  const stamps = account?.profile.is_demo && account.profile.username === "olivia"
+    ? DEMO_ATTENDANCE.map(concertId => ({ concertId, id: `DEMO-${concertId}`, at: "2026-10-18" }))
+    : savedStamps;
   const attended = stamps
     .flatMap((s) => {
       const c = CONCERTS.find((c) => c.id === s.concertId);
@@ -104,12 +109,12 @@ function Loyalty() {
         <div className="grid grid-cols-2 gap-3">
           {attended.map(({ c, id }) => (
             <div key={id} className="overflow-hidden rounded-lg border border-primary/20 bg-card">
-              <img
+              <div className="relative bg-card"><img
                 src={c.cover}
                 alt={c.venue}
                 loading="lazy"
-                className="h-24 w-full object-cover"
-              />
+                className="h-28 w-full object-cover opacity-45"
+              /><img src={passport.url} alt="FanMap verified fan passport stamp" width={96} height={96} loading="lazy" className="absolute right-3 top-2 h-24 w-24 -rotate-12 object-contain" /></div>
               <div className="p-4">
                 <BadgeCheck className="h-5 w-5 text-primary" />
                 <p className="mt-3 text-sm font-medium">
