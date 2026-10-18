@@ -289,7 +289,7 @@ function Artist() {
                   key={r.id}
                   className="overflow-hidden rounded-2xl border border-border bg-card"
                 >
-                  <img src={r.poster} alt="" className="aspect-[4/5] w-full object-cover" />
+                  {r.video ? <video controls src={r.video} className="aspect-[4/5] w-full object-contain" /> : <img src={CONCERTS.find((c) => c.id === r.concertId)?.cover} alt={r.caption} className="aspect-[4/5] w-full object-cover" />}
                   <div className="p-3 text-sm">
                     <p className="font-medium">{r.caption}</p>
                     <p className="text-xs text-muted-foreground">
