@@ -69,11 +69,11 @@ export default function MapView({ onSelect, flyTo }: { onSelect: (c: Concert) =>
       if (g.items.length > 1) {
         div.className = "fm-cluster";
         div.textContent = String(g.items.length);
-        const c = g.items[0];
+        const c = g.items[0]!;
         div.onclick = () => m.flyTo({ center: [c.lng, c.lat], zoom: m.getZoom() + 2 });
         markers.current.push(new maplibregl.Marker({ element: div }).setLngLat([c.lng, c.lat]).addTo(m));
       } else {
-        const c = g.items[0];
+        const c = g.items[0]!;
         const st = concertStatus(c);
         const attended = stamps.some((s) => s.concertId === c.id);
         div.className = "fm-marker " + (st === "today" ? "today" : attended || st === "past" ? "past" : "upcoming");
