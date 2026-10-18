@@ -5,7 +5,6 @@ export const demoLogin = createServerFn({ method: "POST" })
   .inputValidator(z.object({ account: z.enum(["alex", "olivia", "jasper"]) }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.auth.signOut({ scope: "local" });
     const email = `${data.account}@fanmap.demo`;
     const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
     if (error) throw error;
@@ -50,8 +49,8 @@ export const getAccount = createServerFn({ method: "POST" })
       .select("*")
       .eq("user_id", context.userId)
       .single();
-    const { data: attendance } = await context.supabase.from("attendance").select("*");
-    const { data: tickets } = await context.supabase.from("tickets").select("*");
+    const { data: attendance } = await context.supabase.from("attendance").select("*").eq("user_id", context.userId);
+    const { data: tickets } = await context.supabase.from("tickets").select("*").eq("user_id", context.userId);
     return { profile, role, attendance: attendance ?? [], tickets: tickets ?? [] };
   });
 export const artistAudience = createServerFn({ method: "POST" })

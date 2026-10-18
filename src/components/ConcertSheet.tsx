@@ -140,7 +140,7 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
       )}
       {friends.length > 0 && (
         <div>
-          <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Friends here</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Fictional demo fans here</p>
           <div className="flex gap-2">{friends.map((f) => <span key={f.id} className="rounded-full bg-card px-3 py-1 text-xs">{f.name}</span>)}</div>
         </div>
       )}
@@ -304,9 +304,9 @@ const concertArtist = (id: string) => CONCERTS.find((c) => c.id === id)?.artistI
 
 function Guide({ concert }: { concert: Concert }) {
   const tips = [
-    ["Doors", "Doors open 1 hour before showtime. Arrive early for floor sections."],
-    ["Getting there", `Transit is the fastest route to ${concert.venue}. Rideshare pickup is usually one block away.`],
-    ["Bag policy", "Small clear bags only. Check the venue's official site for current rules."],
+    ["Doors", "Door times and entrances are not verified. Check your ticket and the official venue information."],
+    ["Getting there", `Check current directions to ${concert.venue}; live transit and pickup locations are not available here.`],
+    ["Bag policy", "Check the venue's official site for its current bag policy. No verified policy is available in this demo."],
   ];
   return (
     <div className="space-y-3">
