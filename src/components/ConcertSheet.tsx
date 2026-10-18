@@ -149,7 +149,8 @@ function Overview({ concert, stampId, hasTicket }: { concert: Concert; stampId?:
 }
 
 function Reels({ concert }: { concert: Concert }) {
-  const reels = useApp((s) => s.reels.filter((r) => r.concertId === concert.id));
+  const allReels = useApp((s) => s.reels);
+  const reels = useMemo(() => allReels.filter((r) => r.concertId === concert.id), [allReels, concert.id]);
   const votes = useApp((s) => s.votes);
   const vote = useApp((s) => s.vote);
   const submit = useApp((s) => s.submitReel);
@@ -206,7 +207,8 @@ function Reels({ concert }: { concert: Concert }) {
 }
 
 function Predict({ concert }: { concert: Concert }) {
-  const preds = useApp((s) => s.predictions[concert.id] ?? {});
+  const predictions = useApp((s) => s.predictions);
+  const preds = predictions[concert.id] ?? {};
   const locked = useApp((s) => !!s.locked[concert.id]);
   const set = useApp((s) => s.setPrediction);
   const lock = useApp((s) => s.lockPredictions);
