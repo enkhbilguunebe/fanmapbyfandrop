@@ -51,7 +51,7 @@ export default function ArtistTourMap({ stops }: { stops: TourStop[] }) {
       const onLoad = () => markers.forEach((x) => x.addTo(m));
       m.once("load", onLoad);
     }
-    return () => { m.off("load"); markers.forEach((x) => x.remove()); };
+    return () => { markers.forEach((x) => x.remove()); };
   }, [stops, style]);
 
   return (
