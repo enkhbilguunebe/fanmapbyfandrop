@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, lazy, Suspense, useMemo } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { artistAudience, sendAnnouncement } from "@/lib/fanmap.functions";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { usePresentationDemo } from "@/lib/presentation-demo";
+import { TOUR_STOPS, OVERVIEW_STATS } from "@/lib/artist-demo";
 
 export const Route = createFileRoute("/artist")({
   head: () => ({
@@ -38,8 +39,7 @@ export const Route = createFileRoute("/artist")({
 
 const SECTIONS = ["Overview", "Tour map", "Fans", "Messaging", "Letters", "Reels"] as const;
 const ArtistTourMap = lazy(() => import("@/components/ArtistTourMap"));
-// Fictional demo attendance per show (labeled in UI)
-const DEMO_ATTENDED: Record<string, number> = { "c-toronto": 214, "c-montreal": 1840, "c-nyc": 3125, "c-pittsburgh": 962 };
+const crowdTier = (n: number) => (n >= 3000 ? "high" : n >= 1500 ? "mid" : "low");
 
 function Artist() {
   const { account, user } = useAccount();
@@ -66,7 +66,7 @@ function Artist() {
   const replyLetter = (id: string, text: string) => id.startsWith("demo-") ? demo.patchLetter(id, { artistReply: text }) : useApp.getState().replyLetter(id, text);
   const [letterSort, setLetterSort] = useState<"liked" | "new">("liked");
   const novaConcerts = CONCERTS.filter((c) => c.artistId === "nova");
-  const tourStops = useMemo(() => novaConcerts.map((c) => ({ concert: c, attended: concertStatus(c) === "upcoming" ? 0 : (DEMO_ATTENDED[c.id] ?? 0) })), []);
+  const isDemo = !!account?.profile.is_demo;
   const segment = audience.filter((f) => f.count >= min && f.optIn);
   const novaLetters = letters.filter((l) => novaConcerts.some((c) => c.id === l.concertId));
 
@@ -126,28 +126,37 @@ function Artist() {
 
           {sec === "Overview" && (
             <>
-              <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {[
-                  ["Verified fans", audience.length],
-                  ["Repeat attendees", audience.filter((f) => f.count > 1).length],
-                  ["Opted in", audience.filter((f) => f.optIn).length],
-                  ["Letters", novaLetters.length],
-                ].map(([l, v]) => (
-                  <div key={l as string} className="rounded-2xl border border-border bg-card p-5">
+              {isDemo && <p className="mt-4 text-xs text-gold">Fictional demo audience figures for presentation.</p>}
+              <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {(isDemo ? [
+                  ["Verified fans", OVERVIEW_STATS.verified.toLocaleString(), "+" + OVERVIEW_STATS.newThisMonth.toLocaleString() + " this month"],
+                  ["Repeat attendees", OVERVIEW_STATS.repeat.toLocaleString(), "2+ shows checked in"],
+                  ["Opted in to messages", OVERVIEW_STATS.optIn.toLocaleString(), Math.round(OVERVIEW_STATS.optIn / OVERVIEW_STATS.verified * 100) + "% of verified"],
+                  ["Letters", novaLetters.length.toLocaleString(), "from verified fans"],
+                  ["Past shows", String(OVERVIEW_STATS.pastShows), "Afterglow Tour"],
+                  ["Upcoming shows", String(OVERVIEW_STATS.upcoming), "incl. tonight"],
+                  ["Avg. crowd", OVERVIEW_STATS.avgCrowd.toLocaleString(), "verified per show"],
+                  ["Top city", OVERVIEW_STATS.topCity, "most check-ins"],
+                ] : [
+                  ["Verified fans", String(audience.length), ""],
+                  ["Repeat attendees", String(audience.filter((f) => f.count > 1).length), ""],
+                  ["Opted in", String(audience.filter((f) => f.optIn).length), ""],
+                  ["Letters", String(novaLetters.length), ""],
+                ]).map(([l, v, sub]) => (
+                  <div key={l} className="rounded-2xl border border-border bg-card p-5">
                     <p className="text-xs text-muted-foreground">{l}</p>
                     <p className="mt-2 text-3xl font-semibold">{v}</p>
+                    {sub && <p className="mt-1 text-xs text-primary">{sub}</p>}
                   </div>
                 ))}
               </div>
               <h2 className="mt-10 text-sm font-medium text-muted-foreground">Events</h2>
               <div className="mt-3 divide-y divide-border rounded-2xl border border-border bg-card">
-                {novaConcerts.map((c) => (
-                  <div key={c.id} className="flex justify-between px-5 py-3 text-sm">
-                    <span>
-                      {c.venue}, {c.city}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {new Date(c.date).toLocaleDateString()} · {concertStatus(c)}
+                {(isDemo ? [...TOUR_STOPS].reverse() : novaConcerts.map((c) => ({ id: c.id, city: c.city, venue: c.venue, date: c.date, attended: 0, status: concertStatus(c) }))).map((s) => (
+                  <div key={s.id} className="flex justify-between gap-3 px-5 py-3 text-sm">
+                    <span>{s.venue}, {s.city}</span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {new Date(s.date).toLocaleDateString()} · {s.status === "past" && s.attended ? s.attended.toLocaleString() + " fans" : s.status}
                     </span>
                   </div>
                 ))}
@@ -157,27 +166,35 @@ function Artist() {
 
           {sec === "Tour map" && (
             <div className="mt-6">
-              <p className="text-xs text-gold">Fictional demo attendance numbers.</p>
+              <p className="text-xs text-gold">Fictional demo tour history and attendance.</p>
               <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-primary" />Past show · fans attended</span>
-                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-gold" />Today</span>
-                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full border-2 border-dashed border-primary" />Upcoming</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-primary ring-4 ring-primary/30" />Upcoming (highlighted)</span>
+                <span className="flex items-center gap-1.5"><span className="fm-dot high" />Past · 3,000+ fans</span>
+                <span className="flex items-center gap-1.5"><span className="fm-dot mid" />Past · 1,500–2,999</span>
+                <span className="flex items-center gap-1.5"><span className="fm-dot low" />Past · under 1,500</span>
               </div>
-              <div className="relative mt-3 h-[420px] overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="relative mt-3 h-[460px] overflow-hidden rounded-2xl border border-border bg-card">
                 <ClientOnly fallback={null}>
-                  <Suspense fallback={null}><ArtistTourMap stops={tourStops} /></Suspense>
+                  <Suspense fallback={null}><ArtistTourMap stops={TOUR_STOPS} /></Suspense>
                 </ClientOnly>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {tourStops.map(({ concert: c, attended }) => {
-                  const st = concertStatus(c);
-                  return (
-                    <div key={c.id} className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-sm">
-                      <div><p className="font-medium">{c.city}</p><p className="text-xs text-muted-foreground">{c.venue} · {new Date(c.date).toLocaleDateString()}</p></div>
-                      <span className={cn("text-sm font-semibold", st === "upcoming" ? "text-muted-foreground" : "text-primary")}>{st === "upcoming" ? "Upcoming" : `${attended.toLocaleString()} fans`}</span>
-                    </div>
-                  );
-                })}
+              <h2 className="mt-6 text-sm font-medium text-muted-foreground">Upcoming</h2>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {TOUR_STOPS.filter((s) => s.status !== "past").map((s) => (
+                  <div key={s.id} className="flex items-center justify-between rounded-2xl border-2 border-primary bg-primary/5 px-4 py-3 text-sm">
+                    <div><p className="font-medium">{s.city}</p><p className="text-xs text-muted-foreground">{s.venue} · {new Date(s.date).toLocaleDateString()}</p></div>
+                    <span className="text-sm font-semibold text-primary">{s.status === "today" ? "Tonight" : "Upcoming"}</span>
+                  </div>
+                ))}
+              </div>
+              <h2 className="mt-6 text-sm font-medium text-muted-foreground">Past shows</h2>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {TOUR_STOPS.filter((s) => s.status === "past").reverse().map((s) => (
+                  <div key={s.id} className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-sm">
+                    <div className="flex items-center gap-2"><span className={"fm-dot " + crowdTier(s.attended)} /><div><p className="font-medium">{s.city}</p><p className="text-xs text-muted-foreground">{s.venue} · {new Date(s.date).toLocaleDateString()}</p></div></div>
+                    <span className="text-sm font-semibold">{s.attended.toLocaleString()} fans</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
