@@ -10,33 +10,73 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArtistRouteImport } from './routes/artist'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as LoyaltyRouteImport } from './routes/loyalty'
+import { Route as PhotosRouteImport } from './routes/photos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArtistRoute = ArtistRouteImport.update({
+  id: '/artist',
+  path: '/artist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoyaltyRoute = LoyaltyRouteImport.update({
+  id: '/loyalty',
+  path: '/loyalty',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhotosRoute = PhotosRouteImport.update({
+  id: '/photos',
+  path: '/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/artist': typeof ArtistRoute
+  '/chat': typeof ChatRoute
+  '/loyalty': typeof LoyaltyRoute
+  '/photos': typeof PhotosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/artist': typeof ArtistRoute
+  '/chat': typeof ChatRoute
+  '/loyalty': typeof LoyaltyRoute
+  '/photos': typeof PhotosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/artist': typeof ArtistRoute
+  '/chat': typeof ChatRoute
+  '/loyalty': typeof LoyaltyRoute
+  '/photos': typeof PhotosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
+  id: '__root__' | '/' | '/artist' | '/chat' | '/loyalty' | '/photos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArtistRoute: typeof ArtistRoute
+  ChatRoute: typeof ChatRoute
+  LoyaltyRoute: typeof LoyaltyRoute
+  PhotosRoute: typeof PhotosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +88,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/artist': {
+      id: '/artist'
+      path: '/artist'
+      fullPath: '/artist'
+      preLoaderRoute: typeof ArtistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loyalty': {
+      id: '/loyalty'
+      path: '/loyalty'
+      fullPath: '/loyalty'
+      preLoaderRoute: typeof LoyaltyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/photos': {
+      id: '/photos'
+      path: '/photos'
+      fullPath: '/photos'
+      preLoaderRoute: typeof PhotosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArtistRoute: ArtistRoute,
+  ChatRoute: ChatRoute,
+  LoyaltyRoute: LoyaltyRoute,
+  PhotosRoute: PhotosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
