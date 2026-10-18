@@ -50,6 +50,32 @@ export type Database = {
           },
         ]
       }
+      connection_tokens: {
+        Row: {
+          expires_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deletion_requests: {
         Row: {
           created_at: string
@@ -166,6 +192,126 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_messages: {
+        Row: {
+          created_at: string
+          friendship_id: string
+          id: string
+          read_at: string | null
+          sender_id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          friendship_id: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          friendship_id?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_messages_friendship_id_fkey"
+            columns: ["friendship_id"]
+            isOneToOne: false
+            referencedRelation: "friendships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_threads: {
+        Row: {
+          event_id: string
+          id: string
+          messages: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_threads_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       letter_likes: {
         Row: {
           letter_id: string
@@ -238,6 +384,111 @@ export type Database = {
           {
             foreignKeyName: "letters_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_positions: {
+        Row: {
+          accuracy: number
+          lat: number
+          lng: number
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy: number
+          lat: number
+          lng: number
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number
+          lat?: number
+          lng?: number
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_positions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "location_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_positions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_sessions: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          meeting_accepted: boolean
+          meeting_lat: number | null
+          meeting_lng: number | null
+          meeting_proposer: string | null
+          receiver_consent: boolean
+          receiver_id: string
+          sender_consent: boolean
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meeting_accepted?: boolean
+          meeting_lat?: number | null
+          meeting_lng?: number | null
+          meeting_proposer?: string | null
+          receiver_consent?: boolean
+          receiver_id: string
+          sender_consent?: boolean
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          meeting_accepted?: boolean
+          meeting_lat?: number | null
+          meeting_lng?: number | null
+          meeting_proposer?: string | null
+          receiver_consent?: boolean
+          receiver_id?: string
+          sender_consent?: boolean
+          sender_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_sessions_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_sessions_sender_id_fkey"
+            columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -502,6 +753,11 @@ export type Database = {
         Returns: undefined
       }
       fanmap_eligible: { Args: { e: string }; Returns: boolean }
+      fanmap_friends: { Args: { a: string; b: string }; Returns: boolean }
+      fanmap_location_transition: {
+        Args: { action: string; reverified?: boolean; s: string }
+        Returns: undefined
+      }
       fanmap_moderate: { Args: { r: string; s: string }; Returns: undefined }
       fanmap_verified: { Args: never; Returns: boolean }
       fanmap_verify: {

@@ -8,6 +8,13 @@
       "when": 1792335081026,
       "tag": "0000_fanmap_accounts_concerts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792335139790,
+      "tag": "0001_fanmap_friends_guide_location",
+      "breakpoints": true
     }
   ]
 }
