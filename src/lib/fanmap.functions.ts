@@ -5,6 +5,7 @@ export const demoLogin = createServerFn({ method: "POST" })
   .inputValidator(z.object({ account: z.enum(["alex", "olivia", "jasper"]) }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.auth.signOut({ scope: "local" });
     const email = `${data.account}@fanmap.demo`;
     const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
     if (error) throw error;
@@ -21,7 +22,11 @@ export const demoLogin = createServerFn({ method: "POST" })
       email,
     });
     if (e) throw e;
-    const { data: session, error: s } = await supabaseAdmin.auth.verifyOtp({
+    const { createClient } = await import("@supabase/supabase-js");
+    const authClient = createClient(process.env["SUPABASE_URL"] ?? "", process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "", {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: session, error: s } = await authClient.auth.verifyOtp({
       type: "magiclink",
       token_hash: link.properties.hashed_token,
     });

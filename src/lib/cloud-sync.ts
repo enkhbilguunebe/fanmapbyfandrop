@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "./store";
+let generation = 0;
+export function clearCloudState() {
+  generation++;
+  useApp.setState({ role: "visitor", tickets: [], stamps: [], letters: [], reels: [], messages: [], predictions: {}, locked: {}, votes: {}, likedLetters: [] });
+}
 export async function syncCloud() {
+  const current = ++generation;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -36,6 +42,8 @@ export async function syncCloud() {
       return { ...r, url: data?.signedUrl };
     }),
   );
+  const { data: session } = await supabase.auth.getSession();
+  if (current !== generation || session.session?.user.id !== user.id) return;
   useApp.setState({
     role:
       role.data?.role === "artist"

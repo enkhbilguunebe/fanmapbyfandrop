@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { getAccount } from "./fanmap.functions";
-import { syncCloud } from "./cloud-sync";
+import { syncCloud, clearCloudState } from "./cloud-sync";
 import type { User } from "@supabase/supabase-js";
 type Account = Awaited<ReturnType<typeof getAccount>>;
 const Context = createContext<{
@@ -37,6 +37,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(event)) {
+        if (event !== "USER_UPDATED") {
+          clearCloudState();
+          setAccount(null);
+          setLoading(true);
+        }
         setTimeout(() => {
           void refresh();
           void router.invalidate();
