@@ -163,8 +163,8 @@
 .fm-tour-pin.high { background: oklch(0.62 0.16 150); color: white; }
 .fm-tour-pin.mid { background: oklch(0.82 0.16 90); color: oklch(0.25 0.04 90); }
 .fm-tour-pin.low { background: oklch(0.6 0.2 25); color: white; }
-.fm-tour-pin.upcoming, .fm-tour-pin.today { opacity: 1; z-index: 2; min-width: 44px; height: 44px; font-size: 12px; background: var(--primary); color: var(--primary-foreground); border: 3px solid var(--card); box-shadow: 0 0 0 6px oklch(0.65 0.15 160 / .3), 0 6px 18px oklch(0 0 0 / .3); animation: fm-tour-pulse 1.8s ease-in-out infinite; }
-.fm-tour-pin.today { background: var(--gold); color: var(--foreground); }
+.fm-tour-pin.today { opacity: 1; z-index: 2; min-width: 44px; height: 44px; font-size: 12px; background: var(--gold); color: var(--foreground); border: 3px solid var(--card); box-shadow: 0 0 0 6px oklch(0.65 0.15 160 / .3), 0 6px 18px oklch(0 0 0 / .3); animation: fm-tour-pulse 1.8s ease-in-out infinite; }
+.fm-tour-pin.upcoming { opacity: 1; z-index: 2; min-width: 44px; height: 44px; font-size: 12px; background: oklch(0.58 0.18 255); color: white; border: 3px solid var(--card); box-shadow: 0 0 0 6px oklch(0.58 0.18 255 / .3), 0 6px 18px oklch(0 0 0 / .3); }
 @keyframes fm-tour-pulse { 50% { box-shadow: 0 0 0 12px oklch(0.65 0.15 160 / 0), 0 6px 18px oklch(0 0 0 / .3); } }
 .fm-dot { display:inline-block; width:12px; height:12px; border-radius:999px; }
 .fm-dot.high { background: oklch(0.62 0.16 150); }
