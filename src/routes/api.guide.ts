@@ -1,0 +1,1 @@
+import {createFileRoute} from '@tanstack/react-router';import {handleGuide} from '@/lib/guide.server';export const Route=createFileRoute('/api/guide')({server:{handlers:{POST:({request})=>handleGuide(request)}}});
